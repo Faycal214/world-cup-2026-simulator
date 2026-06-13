@@ -1,62 +1,29 @@
+from __future__ import annotations
+
 import numpy as np
+
 from src.climate_engine import get_climate_factor
-from src.team_mentality import get_mentality_modifier
 from src.stakes_engine import get_stakes_modifier
+from src.team_mentality import get_mentality_modifier
+from src.config import HOST_TEAMS
 
-# Bias coefficients for realistic match outcomes
-REFEREE_BIAS_COEFFICIENT = 0.15  # Host nation referee bias
-CHAMPION_LUCK_COEFFICIENT = 0.10  # Argentina reigning champion luck
-
-
-def generate_score_from_probability(goal_expectancy: float) -> int:
-    """
-    Generate realistic goal count using probability distribution instead of raw Poisson.
-
-    Base distribution (goal_expectancy = 2.0):
-    - 0 goals: 20%
-    - 1 goal: 35%
-    - 2 goals: 25%
-    - 3 goals: 15%
-    - 4+ goals: 5%
-
-    Adjusted by goal_expectancy scaling to reflect stronger/weaker teams.
-
-    Args:
-        goal_expectancy: Expected goal value (typically 0.5-4.0 after all modifiers)
-
-    Returns:
-        Number of goals (0-4+)
-    """
-    # Normalize to factor relative to base expectancy of 2.0
-    exp_factor = np.clip(goal_expectancy / 2.0, 0.5, 2.0)
-
-    # Base probabilities
-    base_probs = [0.20, 0.35, 0.25, 0.15, 0.05]
-
-    # Adjust probabilities by expectancy factor
-    adjusted_probs = []
-    for i, prob in enumerate(base_probs):
-        if i == 0:
-            # Lower expected goals → higher 0-goal probability
-            adjusted_probs.append(base_probs[0] / (exp_factor ** 0.5))
-        elif i <= 2:
-            # Scale 1-2 goals linearly with expectancy
-            adjusted_probs.append(base_probs[i] * exp_factor)
-        else:
-            # Diminishing returns for 3+ goals
-            adjusted_probs.append(base_probs[i] * (exp_factor ** 0.7))
-
-    # Normalize to probability distribution
-    total = sum(adjusted_probs)
-    probs = [p / total for p in adjusted_probs]
-
-    # Draw from distribution
-    return np.random.choice([0, 1, 2, 3, 4], p=probs)
-
+KNOCKOUT_STAGES = {"round_of_32", "round_of_16", "quarter_finals", "semi_finals", "final"}
 
 class MatchSimulator:
-    def __init__(self, elo_scaling_factor: float = 0.0015):
-        self.c = elo_scaling_factor
+    def __init__(self, random_state: int | None = None, elo_scale: float = 0.0012):
+        self.rng = np.random.default_rng(random_state)
+        self.elo_scale = elo_scale
+
+    @staticmethod
+    def _safe_float(value, default=0.0) -> float:
+        try:
+            if value is None:
+                return default
+            if isinstance(value, str) and not value.strip():
+                return default
+            return float(value)
+        except Exception:
+            return default
 
     def calculate_lambda(
         self,
@@ -65,173 +32,179 @@ class MatchSimulator:
         context: dict,
         team_class: str = None,
         opponent_class: str = None,
-        stakes: str = None
+        stakes: str = None,
     ) -> float:
-        """
-        Calculate adjusted lambda for Poisson-like distribution using comprehensive modifiers.
+        venue_name = context.get("venue_name", "")
+        climate = get_climate_factor(team_profile, venue_name)["factor"]
 
-        Formula: λ_final = λ_base × C_climate × S_stakes × M_mentality × B_bias × K_tension
-
-        Args:
-            team_profile: Attacking team's profile dict
-            opponent_profile: Defending team's profile dict
-            context: Match context (venue, stage, etc.)
-            team_class: Team classification (Title_Contender, Good_Team, etc.)
-            opponent_class: Opponent classification
-            stakes: Match stakes (Must_Win, Playing_for_Pride, etc.)
-
-        Returns:
-            Adjusted lambda value for scoring intensity
-        """
-        elo_diff = team_profile['current_elo'] - opponent_profile['current_elo']
-
-        # Host advantage (structural +100 Elo)
-        if team_profile['is_host']:
-            elo_diff += 100
-        if opponent_profile['is_host']:
-            elo_diff -= 100
-
-        # Base lambda from Elo difference
-        lambda_base = team_profile['alpha_base'] * opponent_profile['beta_base'] * np.exp(self.c * elo_diff)
-        lambda_base = np.clip(lambda_base, 0.2, 5.0)
-
-        # Climate modifier
-        venue_name = context.get('venue_name', '')
-        climate_modifier = 1.0
-        if venue_name:
-            climate_info = get_climate_factor(team_profile, venue_name)
-            climate_modifier = climate_info['factor']
-
-        # Stakes modifier
-        stakes_modifier = 1.0
-        if stakes:
-            stakes_modifier = get_stakes_modifier(stakes)
-
-        # Mentality modifier
-        mentality_modifier = 1.0
+        mentality = 1.0
         if team_class and opponent_class:
-            mentality_modifier = get_mentality_modifier(team_class, opponent_class)
+            mentality = get_mentality_modifier(team_class, opponent_class)
 
-        # Bias modifier (referee bias + champion luck)
-        bias_modifier = self._apply_bias_modifier(team_profile, opponent_profile, context)
+        stakes_modifier = get_stakes_modifier(stakes) if stakes else 1.0
 
-        # Knockout tension modifier
-        knockout_modifier = self._apply_knockout_modifier(context.get('stage', 'group'))
+        elo_a = self._safe_float(team_profile.get("current_elo", team_profile.get("elo", 1500.0)), 1500.0)
+        elo_b = self._safe_float(opponent_profile.get("current_elo", opponent_profile.get("elo", 1500.0)), 1500.0)
 
-        # Calculate final lambda
-        lambda_final = (
-            lambda_base
-            * climate_modifier
-            * stakes_modifier
-            * mentality_modifier
-            * bias_modifier
-            * knockout_modifier
+        attack = self._safe_float(team_profile.get("attack_prior"), 0.0)
+        defense_opp = self._safe_float(opponent_profile.get("defense_prior"), 0.0)
+
+        elo_term = self._safe_float(team_profile.get("elo_prior"), 0.0) - self._safe_float(opponent_profile.get("elo_prior"), 0.0)
+        market_term = self._safe_float(team_profile.get("market_prior"), 0.0) - self._safe_float(opponent_profile.get("market_prior"), 0.0)
+        form_term = self._safe_float(team_profile.get("form_prior"), 0.0) - self._safe_float(opponent_profile.get("form_prior"), 0.0)
+
+        host_term = self._safe_float(team_profile.get("host_prior"), 0.0) - self._safe_float(opponent_profile.get("host_prior"), 0.0)
+        travel_term = -self._safe_float(team_profile.get("travel_prior"), 0.0)
+        scenario_term = self._safe_float(team_profile.get("scenario_bias_prior"), 0.0)
+
+        # A compact but expressive intensity model.
+        linear = (
+            0.12
+            + 0.55 * attack
+            - 0.42 * defense_opp
+            + 0.18 * elo_term
+            + 0.10 * market_term
+            + 0.12 * form_term
+            + 0.24 * host_term
+            + 0.08 * travel_term
+            + 0.08 * scenario_term
         )
 
-        return np.clip(lambda_final, 0.2, 5.0)
+        # Host nations can get a mild structural lift.
+        if team_profile.get("team") in HOST_TEAMS:
+            linear += 0.06
 
-    def _apply_bias_modifier(self, team_profile: dict, opponent_profile: dict, context: dict) -> float:
-        """Apply referee bias and luck modifiers"""
-        bias = 1.0
+        # Slight dampening in highly tense matches if stakes are set.
+        if stakes == "Knockout_Tension":
+            linear -= 0.08
 
-        # Referee bias for hosts (+0.15 Elo advantage converted to lambda boost)
-        if team_profile['is_host']:
-            bias *= (1 + REFEREE_BIAS_COEFFICIENT * 0.05)  # ~5% goal expectancy boost
+        lambda_base = np.exp(linear)
+        lambda_final = lambda_base * climate * mentality * stakes_modifier
 
-        # Champion's luck for Argentina (+0.10)
-        if team_profile['country'] == 'Argentina':
-            bias *= (1 + CHAMPION_LUCK_COEFFICIENT * 0.03)  # ~3% goal expectancy boost
+        return float(np.clip(lambda_final, 0.15, 4.80))
 
-        return bias
+    def _shared_intensity(self, lambda_a: float, lambda_b: float) -> float:
+        # Shared latent state for a bivariate Poisson: small positive covariance.
+        shared = 0.10 + 0.18 * np.sqrt(max(lambda_a, 0.0) * max(lambda_b, 0.0))
+        return float(np.clip(shared, 0.03, 0.60))
 
-    def _apply_stakes_modifier(self, team_profile: dict, stage: str) -> float:
-        """Apply motivation modifier based on match stakes"""
-        if stage == 'group_stage_final' and team_profile.get('needs_points'):
-            return 1.25
-        elif stage == 'group_stage_final' and team_profile.get('already_qualified'):
-            return 0.8
+    def _simulate_bivariate_goals(self, lambda_a: float, lambda_b: float) -> tuple[int, int, float]:
+        shared = self._shared_intensity(lambda_a, lambda_b)
+        private_a = max(lambda_a - shared, 0.05)
+        private_b = max(lambda_b - shared, 0.05)
 
-        return 1.0
+        x1 = self.rng.poisson(private_a)
+        x2 = self.rng.poisson(private_b)
+        x3 = self.rng.poisson(shared)
 
-    def _apply_knockout_modifier(self, stage: str) -> float:
-        """Apply defensive caution in knockout matches"""
-        if stage in ['round_of_32', 'round_of_16', 'quarter_finals', 'semi_finals', 'final']:
-            return 0.8
+        return int(x1 + x3), int(x2 + x3), shared
 
-        return 1.0
+    def penalty_shootout(self, team_a: dict, team_b: dict) -> dict:
+        elo_a = self._safe_float(team_a.get("current_elo", team_a.get("elo", 1500.0)), 1500.0)
+        elo_b = self._safe_float(team_b.get("current_elo", team_b.get("elo", 1500.0)), 1500.0)
+        diff = elo_a - elo_b
 
-    def penalty_shootout(self, team_a: dict, team_b: dict) -> str:
-        """
-        Simulate penalty shootout based on Elo ratings.
-        Returns 'A' or 'B' for the winner.
-        """
-        elo_diff = team_a['current_elo'] - team_b['current_elo']
-        p_a = 0.70 + (elo_diff * 0.0001)
-        p_a = np.clip(p_a, 0.50, 0.85)
-        return 'A' if np.random.binomial(1, p_a) == 1 else 'B'
+        p_a = float(np.clip(0.75 + 0.00008 * diff, 0.58, 0.88))
+        p_b = float(np.clip(0.75 - 0.00008 * diff, 0.58, 0.88))
+
+        score_a = 0
+        score_b = 0
+
+        for _ in range(5):
+            score_a += int(self.rng.binomial(1, p_a))
+            score_b += int(self.rng.binomial(1, p_b))
+
+        if score_a != score_b:
+            return {
+                "winner": "A" if score_a > score_b else "B",
+                "score_a": score_a,
+                "score_b": score_b,
+            }
+
+        # Sudden death
+        while score_a == score_b:
+            score_a += int(self.rng.binomial(1, p_a))
+            score_b += int(self.rng.binomial(1, p_b))
+
+        return {
+            "winner": "A" if score_a > score_b else "B",
+            "score_a": score_a,
+            "score_b": score_b,
+        }
 
     def simulate_match(
         self,
         team_a: dict,
         team_b: dict,
-        context: dict = None,
-        team_class_a: str = None,
-        team_class_b: str = None,
-        stakes_a: str = None,
-        stakes_b: str = None
+        context: dict | None = None,
+        team_class_a: str | None = None,
+        team_class_b: str | None = None,
+        stakes_a: str | None = None,
+        stakes_b: str | None = None,
     ) -> dict:
-        """
-        Simulate a match with realistic probability-based scoring.
+        context = context or {"stage": "group", "venue_name": "Neutral"}
 
-        Args:
-            team_a: Home team profile dict
-            team_b: Away team profile dict
-            context: Dict with 'venue_name', 'stage', and match context info
-            team_class_a: Classification of team A
-            team_class_b: Classification of team B
-            stakes_a: Stakes for team A (Must_Win, etc.)
-            stakes_b: Stakes for team B
-        """
-        if context is None:
-            context = {'stage': 'group', 'venue_name': 'Neutral'}
-
-        # Calculate adjusted lambdas with all modifiers
         lambda_a = self.calculate_lambda(
-            team_a, team_b, context,
+            team_a,
+            team_b,
+            context,
             team_class=team_class_a,
             opponent_class=team_class_b,
-            stakes=stakes_a
+            stakes=stakes_a,
         )
-
         lambda_b = self.calculate_lambda(
-            team_b, team_a, {**context, 'is_away': True},
+            team_b,
+            team_a,
+            context,
             team_class=team_class_b,
             opponent_class=team_class_a,
-            stakes=stakes_b
+            stakes=stakes_b,
         )
 
-        # Generate 90-minute scores using probability distribution (realistic scoring)
-        score_a = generate_score_from_probability(lambda_a)
-        score_b = generate_score_from_probability(lambda_b)
+        score_a, score_b, shared = self._simulate_bivariate_goals(lambda_a, lambda_b)
 
         extra_time = False
         penalty_winner = None
+        penalty_score = None
+        stage = context.get("stage", "group")
 
-        # Knockout tie-breaker resolution
-        is_knockout = context.get('stage', 'group') not in ['group', 'group_stage_final']
-        if is_knockout and score_a == score_b:
+        if stage in KNOCKOUT_STAGES and score_a == score_b:
             extra_time = True
-            # Extra time has reduced intensity (lambdas divided by 3)
-            score_et_a = generate_score_from_probability(lambda_a / 3.0)
-            score_et_b = generate_score_from_probability(lambda_b / 3.0)
-            score_a += score_et_a
-            score_b += score_et_b
+            et_a, et_b, _ = self._simulate_bivariate_goals(lambda_a / 3.0, lambda_b / 3.0)
+            score_a += et_a
+            score_b += et_b
 
-            # Penalty shootout if still tied
             if score_a == score_b:
-                penalty_winner = self.penalty_shootout(team_a, team_b)
+                shoot = self.penalty_shootout(team_a, team_b)
+                penalty_winner = shoot["winner"]
+                penalty_score = (shoot["score_a"], shoot["score_b"])
+
+        winner = None
+        method = "90min"
+
+        if score_a > score_b:
+            winner = "A"
+        elif score_b > score_a:
+            winner = "B"
+        else:
+            if penalty_winner is not None:
+                winner = penalty_winner
+                method = "PKs"
+            else:
+                method = "Draw"
+
+        if extra_time:
+            method = "AET" if penalty_winner is None else "AET+PKs"
 
         return {
-            'score_a': score_a, 'score_b': score_b,
-            'extra_time': extra_time, 'penalty_winner': penalty_winner
+            "score_a": score_a,
+            "score_b": score_b,
+            "lambda_a": lambda_a,
+            "lambda_b": lambda_b,
+            "shared_component": shared,
+            "extra_time": extra_time,
+            "penalty_winner": penalty_winner,
+            "penalty_score": penalty_score,
+            "winner": winner,
+            "method": method,
         }

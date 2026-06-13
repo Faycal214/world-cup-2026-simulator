@@ -1,67 +1,56 @@
-"""
-Climate adaptation engine for the 2026 World Cup simulator.
-Calculates how team performance is affected by venue climate conditions.
-"""
+from __future__ import annotations
 
-from src.venue_data import VENUE_METADATA, TEAM_CLIMATE_PROFILES
-
+from src.naming import normalize_team_name
+from src.team_mentality import TEAM_CLIMATE_PROFILES
+from src.venue_data import VENUE_METADATA
 
 def get_climate_factor(team_profile: dict, venue_name: str) -> dict:
-    """
-    Calculate climate adaptation factor and impact details.
-
-    Returns:
-        dict with 'factor' (float) and 'reason' (str) explaining the adjustment
-    """
     venue_info = VENUE_METADATA.get(venue_name, {})
     if not venue_info:
-        return {'factor': 1.0, 'reason': 'Unknown venue'}
+        return {"factor": 1.0, "reason": "Unknown venue", "type": "neutral"}
 
-    team_country = team_profile.get('country', '')
-    team_climate = team_profile.get('climate_profile', 'Temperate')
-    venue_climate = venue_info.get('climate', 'Temperate')
-    venue_country = venue_info.get('country', '')
+    team_country = normalize_team_name(team_profile.get("country", team_profile.get("team", "")))
+    venue_country = normalize_team_name(venue_info.get("country", ""))
+    team_climate = team_profile.get(
+        "climate_profile",
+        TEAM_CLIMATE_PROFILES.get(team_country, "Temperate"),
+    )
+    venue_climate = venue_info.get("climate", "Temperate")
+    altitude_m = float(venue_info.get("altitude_m", 0) or 0)
 
-    if team_country == venue_country:
+    if team_country and venue_country and team_country == venue_country:
         return {
-            'factor': 1.15,
-            'reason': f'Home advantage ({team_country})',
-            'type': 'home'
+            "factor": 1.10,
+            "reason": f"Home-country adaptation ({team_country})",
+            "type": "home",
         }
 
-    penalty_matrix = {
-        ('Cool', 'Hot/Humid'): 0.85,
-        ('Cool', 'Hot/Dry'): 0.87,
-        ('Cool/Temperate', 'Hot/Humid'): 0.88,
-        ('Cool/Temperate', 'Hot/Dry'): 0.90,
-        ('Temperate', 'Hot/Humid'): 0.85,
-        ('Temperate', 'Hot/Dry'): 0.88,
-        ('Cool/Dry', 'Hot/Humid'): 0.87,
-        ('Cool/Dry', 'Hot/Dry'): 0.95,
-    }
+    factor = 1.0
+    reason_parts = []
 
-    penalty = penalty_matrix.get((team_climate, venue_climate))
-    if penalty and penalty < 1.0:
+    if "Hot" in venue_climate and "Cool" in team_climate:
+        factor *= 0.88
+        reason_parts.append(f"{team_climate} → {venue_climate}")
+    elif "Tropical" in team_climate and "Cool" in venue_climate:
+        factor *= 0.94
+        reason_parts.append(f"{team_climate} → {venue_climate}")
+    elif "Temperate" in team_climate and "Hot" in venue_climate:
+        factor *= 0.90
+        reason_parts.append(f"{team_climate} → {venue_climate}")
+
+    if altitude_m >= 1500 and team_country != venue_country:
+        factor *= 0.95
+        reason_parts.append(f"high altitude {altitude_m:.0f}m")
+
+    if not reason_parts:
         return {
-            'factor': penalty,
-            'reason': f'{team_climate} team in {venue_climate} venue',
-            'type': 'penalty'
+            "factor": 1.0,
+            "reason": f"Climate neutral ({team_climate} → {venue_climate})",
+            "type": "neutral",
         }
 
     return {
-        'factor': 1.0,
-        'reason': f'Climate neutral ({team_climate} → {venue_climate})',
-        'type': 'neutral'
+        "factor": max(0.75, min(factor, 1.15)),
+        "reason": ", ".join(reason_parts),
+        "type": "penalty",
     }
-
-
-def format_climate_impact(team_a_profile: dict, team_b_profile: dict, venue_name: str) -> str:
-    """Format climate impact for pre-match reporting"""
-    impact_a = get_climate_factor(team_a_profile, venue_name)
-    impact_b = get_climate_factor(team_b_profile, venue_name)
-
-    reason_a = impact_a['reason']
-    reason_b = impact_b['reason']
-
-    result = f"{team_a_profile['country']} ({reason_a}), {team_b_profile['country']} ({reason_b})"
-    return result

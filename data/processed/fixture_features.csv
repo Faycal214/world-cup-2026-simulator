@@ -1,0 +1,105 @@
+match_id,stage,stage_id,group,home_team,away_team,date_et,time_et,days_from_start,venue_stadium,venue_city,venue_country,venue_region,venue_latitude,venue_longitude,venue_capacity,home_host_flag,away_host_flag,is_host_match,travel_intensity_proxy
+6,Group Stage,1,D,Australia,Turkiye,,00:00,,,,,Unknown,,,,0,0,0,1.0
+20,Group Stage,1,J,Austria,Jordan,,00:00,,,,,Unknown,,,,0,0,0,1.0
+36,Group Stage,1,F,Tunisia,Japan,,00:00,,,,,Unknown,,,,0,0,0,1.0
+14,Group Stage,1,H,Spain,Cabo Verde,,12:00,,,,,Unknown,,,,0,0,0,1.0
+25,Group Stage,1,A,Czechia,South Africa,,12:00,,,,,Unknown,,,,0,0,0,1.0
+38,Group Stage,1,H,Spain,Saudi Arabia,,12:00,,,,,Unknown,,,,0,0,0,1.0
+80,Round of 32,2,,1L,3 EHIJK,,12:00,,,,,Unknown,,,,0,0,0,1.0
+95,Round of 16,3,,W86,W88,,12:00,,,,,Unknown,,,,0,0,0,1.0
+10,Group Stage,1,E,Germany,Curacao,,13:00,,,,,Unknown,,,,0,0,0,1.0
+23,Group Stage,1,K,Portugal,Congo DR,,13:00,,,,,Unknown,,,,0,0,0,1.0
+35,Group Stage,1,F,Netherlands,Sweden,,13:00,,,,,Unknown,,,,0,0,0,1.0
+43,Group Stage,1,J,Argentina,Austria,,13:00,,,,,Unknown,,,,0,0,0,1.0
+47,Group Stage,1,K,Portugal,Uzbekistan,,13:00,,,,,Unknown,,,,0,0,0,1.0
+76,Round of 32,2,,1C,2F,,13:00,,,,,Unknown,,,,0,0,0,1.0
+78,Round of 32,2,,2E,2I,,13:00,,,,,Unknown,,,,0,0,0,1.0
+90,Round of 16,3,,W73,W75,,13:00,,,,,Unknown,,,,0,0,0,1.0
+88,Round of 32,2,,2D,2G,,14:00,,,,,Unknown,,,,0,0,0,1.0
+1,Group Stage,1,A,Mexico,South Africa,,15:00,,,,,Unknown,,,,1,0,1,1.0
+3,Group Stage,1,B,Canada,Bosnia & Herzegovina,,15:00,,,,,Unknown,,,,1,0,1,1.0
+8,Group Stage,1,B,Qatar,Switzerland,,15:00,,,,,Unknown,,,,0,0,0,1.0
+16,Group Stage,1,G,Belgium,Egypt,,15:00,,,,,Unknown,,,,0,0,0,1.0
+17,Group Stage,1,I,France,Senegal,,15:00,,,,,Unknown,,,,0,0,0,1.0
+26,Group Stage,1,B,Switzerland,Bosnia & Herzegovina,,15:00,,,,,Unknown,,,,0,0,0,1.0
+32,Group Stage,1,D,USA,Australia,,15:00,,,,,Unknown,,,,1,0,1,1.0
+39,Group Stage,1,G,Belgium,Iran,,15:00,,,,,Unknown,,,,0,0,0,1.0
+51,Group Stage,1,B,Switzerland,Canada,,15:00,,,,,Unknown,,,,0,1,1,1.0
+52,Group Stage,1,B,Bosnia & Herzegovina,Qatar,,15:00,,,,,Unknown,,,,0,0,0,1.0
+61,Group Stage,1,I,Norway,France,,15:00,,,,,Unknown,,,,0,0,0,1.0
+62,Group Stage,1,I,Senegal,Iraq,,15:00,,,,,Unknown,,,,0,0,0,1.0
+73,Round of 32,2,,2A,2B,,15:00,,,,,Unknown,,,,0,0,0,1.0
+84,Round of 32,2,,1H,2J,,15:00,,,,,Unknown,,,,0,0,0,1.0
+93,Round of 16,3,,W83,W84,,15:00,,,,,Unknown,,,,0,0,0,1.0
+98,Quarter-Finals,4,,W93,W94,,15:00,,,,,Unknown,,,,0,0,0,1.0
+101,Semi-Finals,5,,W97,W98,,15:00,,,,,Unknown,,,,0,0,0,1.0
+102,Semi-Finals,5,,W99,W100,,15:00,,,,,Unknown,,,,0,0,0,1.0
+104,Final,6,,Winner SF1,Winner SF2,,15:00,,,,,Unknown,,,,0,0,0,1.0
+11,Group Stage,1,F,Netherlands,Japan,,16:00,,,,,Unknown,,,,0,0,0,1.0
+22,Group Stage,1,L,England,Croatia,,16:00,,,,,Unknown,,,,0,0,0,1.0
+33,Group Stage,1,E,Germany,Cote d'Ivoire,,16:00,,,,,Unknown,,,,0,0,0,1.0
+45,Group Stage,1,L,England,Ghana,,16:00,,,,,Unknown,,,,0,0,0,1.0
+55,Group Stage,1,E,Curacao,Cote d'Ivoire,,16:00,,,,,Unknown,,,,0,0,0,1.0
+56,Group Stage,1,E,Ecuador,Germany,,16:00,,,,,Unknown,,,,0,0,0,1.0
+82,Round of 32,2,,1G,3 AEHIJ,,16:00,,,,,Unknown,,,,0,0,0,1.0
+91,Round of 16,3,,W76,W78,,16:00,,,,,Unknown,,,,0,0,0,1.0
+96,Round of 16,3,,W85,W87,,16:00,,,,,Unknown,,,,0,0,0,1.0
+97,Quarter-Finals,4,,W89,W90,,16:00,,,,,Unknown,,,,0,0,0,1.0
+74,Round of 32,2,,1E,3 ABCDF,,16:30,,,,,Unknown,,,,0,0,0,1.0
+42,Group Stage,1,I,France,Iraq,,17:00,,,,,Unknown,,,,0,0,0,1.0
+67,Group Stage,1,L,Panama,England,,17:00,,,,,Unknown,,,,0,0,0,1.0
+68,Group Stage,1,L,Croatia,Ghana,,17:00,,,,,Unknown,,,,0,0,0,1.0
+77,Round of 32,2,,1I,3 CDFGH,,17:00,,,,,Unknown,,,,0,0,0,1.0
+89,Round of 16,3,,W74,W77,,17:00,,,,,Unknown,,,,0,0,0,1.0
+99,Quarter-Finals,4,,W91,W92,,17:00,,,,,Unknown,,,,0,0,0,1.0
+103,Bronze Final,6,,Loser SF1,Loser SF2,,17:00,,,,,Unknown,,,,0,0,0,1.0
+7,Group Stage,1,C,Brazil,Morocco,,18:00,,,,,Unknown,,,,0,0,0,1.0
+13,Group Stage,1,H,Saudi Arabia,Uruguay,,18:00,,,,,Unknown,,,,0,0,0,1.0
+18,Group Stage,1,I,Iraq,Norway,,18:00,,,,,Unknown,,,,0,0,0,1.0
+27,Group Stage,1,B,Canada,Qatar,,18:00,,,,,Unknown,,,,1,0,1,1.0
+30,Group Stage,1,C,Scotland,Morocco,,18:00,,,,,Unknown,,,,0,0,0,1.0
+37,Group Stage,1,H,Uruguay,Cabo Verde,,18:00,,,,,Unknown,,,,0,0,0,1.0
+49,Group Stage,1,C,Scotland,Brazil,,18:00,,,,,Unknown,,,,0,0,0,1.0
+50,Group Stage,1,C,Morocco,Haiti,,18:00,,,,,Unknown,,,,0,0,0,1.0
+86,Round of 32,2,,1J,2H,,18:00,,,,,Unknown,,,,0,0,0,1.0
+9,Group Stage,1,E,Cote d'Ivoire,Ecuador,,19:00,,,,,Unknown,,,,0,0,0,1.0
+21,Group Stage,1,L,Ghana,Panama,,19:00,,,,,Unknown,,,,0,0,0,1.0
+46,Group Stage,1,L,Panama,Croatia,,19:00,,,,,Unknown,,,,0,0,0,1.0
+57,Group Stage,1,F,Japan,Sweden,,19:00,,,,,Unknown,,,,0,0,0,1.0
+58,Group Stage,1,F,Tunisia,Netherlands,,19:00,,,,,Unknown,,,,0,0,0,1.0
+83,Round of 32,2,,2K,2L,,19:00,,,,,Unknown,,,,0,0,0,1.0
+71,Group Stage,1,K,Colombia,Portugal,,19:30,,,,,Unknown,,,,0,0,0,1.0
+72,Group Stage,1,K,Congo DR,Uzbekistan,,19:30,,,,,Unknown,,,,0,0,0,1.0
+34,Group Stage,1,E,Ecuador,Curacao,,20:00,,,,,Unknown,,,,0,0,0,1.0
+41,Group Stage,1,I,Norway,Senegal,,20:00,,,,,Unknown,,,,0,0,0,1.0
+65,Group Stage,1,H,Cabo Verde,Saudi Arabia,,20:00,,,,,Unknown,,,,0,0,0,1.0
+66,Group Stage,1,H,Uruguay,Spain,,20:00,,,,,Unknown,,,,0,0,0,1.0
+81,Round of 32,2,,1D,3 BEFIJ,,20:00,,,,,Unknown,,,,0,0,0,1.0
+92,Round of 16,3,,W79,W80,,20:00,,,,,Unknown,,,,0,0,0,1.0
+94,Round of 16,3,,W81,W82,,20:00,,,,,Unknown,,,,0,0,0,1.0
+29,Group Stage,1,C,Brazil,Haiti,,20:30,,,,,Unknown,,,,0,0,0,1.0
+4,Group Stage,1,D,USA,Paraguay,,21:00,,,,,Unknown,,,,1,0,1,1.0
+5,Group Stage,1,C,Haiti,Scotland,,21:00,,,,,Unknown,,,,0,0,0,1.0
+15,Group Stage,1,G,Iran,New Zealand,,21:00,,,,,Unknown,,,,0,0,0,1.0
+19,Group Stage,1,J,Argentina,Algeria,,21:00,,,,,Unknown,,,,0,0,0,1.0
+28,Group Stage,1,A,Mexico,Korea Republic,,21:00,,,,,Unknown,,,,1,0,1,1.0
+40,Group Stage,1,G,New Zealand,Egypt,,21:00,,,,,Unknown,,,,0,0,0,1.0
+53,Group Stage,1,A,Czechia,Mexico,,21:00,,,,,Unknown,,,,0,1,1,1.0
+54,Group Stage,1,A,South Africa,Korea Republic,,21:00,,,,,Unknown,,,,0,0,0,1.0
+75,Round of 32,2,,1F,2C,,21:00,,,,,Unknown,,,,0,0,0,1.0
+79,Round of 32,2,,1A,3 CEFHI,,21:00,,,,,Unknown,,,,0,0,0,1.0
+100,Quarter-Finals,4,,W95,W96,,21:00,,,,,Unknown,,,,0,0,0,1.0
+87,Round of 32,2,,1K,3 DEIJL,,21:30,,,,,Unknown,,,,0,0,0,1.0
+2,Group Stage,1,A,Korea Republic,Czechia,,22:00,,,,,Unknown,,,,0,0,0,1.0
+12,Group Stage,1,F,Sweden,Tunisia,,22:00,,,,,Unknown,,,,0,0,0,1.0
+24,Group Stage,1,K,Uzbekistan,Colombia,,22:00,,,,,Unknown,,,,0,0,0,1.0
+48,Group Stage,1,K,Colombia,Congo DR,,22:00,,,,,Unknown,,,,0,0,0,1.0
+59,Group Stage,1,D,Turkiye,USA,,22:00,,,,,Unknown,,,,0,1,1,1.0
+60,Group Stage,1,D,Paraguay,Australia,,22:00,,,,,Unknown,,,,0,0,0,1.0
+69,Group Stage,1,J,Algeria,Austria,,22:00,,,,,Unknown,,,,0,0,0,1.0
+70,Group Stage,1,J,Jordan,Argentina,,22:00,,,,,Unknown,,,,0,0,0,1.0
+31,Group Stage,1,D,Paraguay,Turkiye,,23:00,,,,,Unknown,,,,0,0,0,1.0
+44,Group Stage,1,J,Jordan,Algeria,,23:00,,,,,Unknown,,,,0,0,0,1.0
+63,Group Stage,1,G,Egypt,Iran,,23:00,,,,,Unknown,,,,0,0,0,1.0
+64,Group Stage,1,G,New Zealand,Belgium,,23:00,,,,,Unknown,,,,0,0,0,1.0
+85,Round of 32,2,,1B,3 EFGIJ,,23:00,,,,,Unknown,,,,0,0,0,1.0

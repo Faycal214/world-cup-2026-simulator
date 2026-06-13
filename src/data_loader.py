@@ -1,48 +1,82 @@
-import pandas as pd
-import numpy as np
-from src.venue_data import TEAM_CLIMATE_PROFILES
-from src.team_mentality import get_team_class
+from __future__ import annotations
 
-class DataProcessor:
-    def __init__(self, filepath: str, current_year: int = 2026, gamma: float = 0.15):
-        self.filepath = filepath
-        self.current_year = current_year
-        self.gamma = gamma
-        
-    def load_and_calibrate(self) -> pd.DataFrame:
-        # Load Kaggle dataset
-        df = pd.read_csv(self.filepath)
-        
-        # Calculate exponential decay weight based on the snapshot year
-        df['weight'] = np.exp(-self.gamma * (self.current_year - df['year']))
-        
-        # Aggregate historical data using vectorized time-decay weights
-        teams = df['country'].unique()
-        calibrated_profiles = []
-        
-        for team in teams:
-            team_data = df[df['country'] == team]
-            latest_row = team_data.sort_values(by='snapshot_date').iloc[-1]
-            
-            # Weighted averages for goal capabilities
-            total_weight = team_data['weight'].sum()
-            weighted_gf = (team_data['goals_for'] * team_data['weight']).sum() / total_weight
-            weighted_ga = (team_data['goals_against'] * team_data['weight']).sum() / total_weight
-            weighted_matches = (team_data['matches_total'] * team_data['weight']).sum() / total_weight
-            
-            # Prevent division by zero
-            base_attack = weighted_gf / max(weighted_matches, 1)
-            base_defense = weighted_ga / max(weighted_matches, 1)
-            
-            calibrated_profiles.append({
-                'country': team,
-                'country_code': latest_row['country_code'],
-                'current_elo': latest_row['rating'],
-                'alpha_base': base_attack if base_attack > 0 else 1.0,
-                'beta_base': base_defense if base_defense > 0 else 1.0,
-                'is_host': latest_row['is_host'],
-                'climate_profile': TEAM_CLIMATE_PROFILES.get(team, 'Temperate'),
-                'classification': get_team_class(team)
-            })
-            
-        return pd.DataFrame(calibrated_profiles)
+from pathlib import Path
+import pandas as pd
+
+from src.config import PROCESSED_DIR, RAW_DIR
+from src.naming import normalize_team_name
+from src.team_mentality import TEAM_CLIMATE_PROFILES, get_team_class
+
+def _load_csv(path: Path, fallback: Path | None = None) -> pd.DataFrame:
+    if path.exists():
+        return pd.read_csv(path)
+    if fallback and fallback.exists():
+        return pd.read_csv(fallback)
+    raise FileNotFoundError(f"Missing file: {path}")
+
+def load_team_profiles() -> pd.DataFrame:
+    team_features_path = PROCESSED_DIR / "team_features.csv"
+    priors_path = PROCESSED_DIR / "team_strength_priors.csv"
+
+    team_features = _load_csv(team_features_path)
+    priors = _load_csv(priors_path)
+
+    team_features = team_features.copy()
+    priors = priors.copy()
+
+    team_features["team"] = team_features["team"].apply(normalize_team_name)
+    priors["team"] = priors["team"].apply(normalize_team_name)
+
+    df = team_features.merge(priors, on="team", how="left", suffixes=("", "_prior"))
+
+    numeric_cols = [
+        "elo", "squad_size", "avg_age", "median_age", "age_std", "avg_caps", "total_caps",
+        "avg_goals", "total_goals", "avg_height_cm", "height_std_cm", "gk_count",
+        "df_count", "mf_count", "fw_count", "gk_share", "df_share", "mf_share",
+        "fw_share", "attack_depth", "defense_depth", "experience_index",
+        "tm_squad_size", "tm_avg_age", "wc_participations", "foreigners_pct",
+        "market_value_eur", "avg_market_value_eur", "form_gf", "form_ga",
+        "form_pts", "attack_prior", "defense_prior", "elo_prior", "market_prior",
+        "form_prior", "host_prior", "travel_prior", "scenario_bias_prior",
+    ]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    df["country"] = df["team"]
+    df["team_class"] = df["team"].apply(get_team_class)
+    df["climate_profile"] = df["team"].map(TEAM_CLIMATE_PROFILES).fillna("Temperate")
+    df["current_elo"] = df["elo"].fillna(1500.0 + 180.0 * df.get("elo_prior", 0).fillna(0.0))
+    df["market_value_raw"] = df["market_value_eur"].fillna(0.0)
+    df["host_flag"] = df.get("host_flag", 0).fillna(0).astype(int)
+
+    # Keep the object ready for fast .loc lookups
+    df = df.sort_values("team").reset_index(drop=True)
+    return df
+
+def load_fixture_features() -> pd.DataFrame:
+    processed_path = PROCESSED_DIR / "fixture_features.csv"
+    raw_path = RAW_DIR / "fixtures_raw.csv"
+
+    fixtures = _load_csv(processed_path, fallback=raw_path)
+    fixtures = fixtures.copy()
+
+    for col in ["home_team", "away_team", "group", "stage", "venue_city", "venue_country", "venue_stadium"]:
+        if col in fixtures.columns:
+            fixtures[col] = fixtures[col].astype(str).map(lambda x: normalize_team_name(x) if col in ["home_team", "away_team"] else x).fillna("")
+
+    if "travel_intensity_proxy" in fixtures.columns:
+        fixtures["travel_intensity_proxy"] = pd.to_numeric(fixtures["travel_intensity_proxy"], errors="coerce").fillna(1.0)
+    else:
+        fixtures["travel_intensity_proxy"] = 1.0
+
+    if "stage_id" in fixtures.columns:
+        fixtures["stage_id"] = pd.to_numeric(fixtures["stage_id"], errors="coerce").fillna(99).astype(int)
+
+    if "date_et" in fixtures.columns:
+        fixtures["date_et"] = pd.to_datetime(fixtures["date_et"], errors="coerce")
+
+    if "time_et" in fixtures.columns:
+        fixtures["time_et"] = fixtures["time_et"].astype(str).fillna("")
+
+    return fixtures
