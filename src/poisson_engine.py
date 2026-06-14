@@ -9,19 +9,23 @@ from src.config import HOST_TEAMS
 
 KNOCKOUT_STAGES = {"round_of_32", "round_of_16", "quarter_finals", "semi_finals", "final"}
 
+
 class MatchSimulator:
     def __init__(self, random_state: int | None = None, elo_scale: float = 0.0012):
         self.rng = np.random.default_rng(random_state)
         self.elo_scale = elo_scale
 
     @staticmethod
-    def _safe_float(value, default=0.0) -> float:
+    def _safe_float(value, default: float = 0.0) -> float:
         try:
             if value is None:
                 return default
             if isinstance(value, str) and not value.strip():
                 return default
-            return float(value)
+            out = float(value)
+            if not np.isfinite(out):
+                return default
+            return out
         except Exception:
             return default
 
@@ -43,9 +47,6 @@ class MatchSimulator:
 
         stakes_modifier = get_stakes_modifier(stakes) if stakes else 1.0
 
-        elo_a = self._safe_float(team_profile.get("current_elo", team_profile.get("elo", 1500.0)), 1500.0)
-        elo_b = self._safe_float(opponent_profile.get("current_elo", opponent_profile.get("elo", 1500.0)), 1500.0)
-
         attack = self._safe_float(team_profile.get("attack_prior"), 0.0)
         defense_opp = self._safe_float(opponent_profile.get("defense_prior"), 0.0)
 
@@ -57,45 +58,52 @@ class MatchSimulator:
         travel_term = -self._safe_float(team_profile.get("travel_prior"), 0.0)
         scenario_term = self._safe_float(team_profile.get("scenario_bias_prior"), 0.0)
 
-        # A compact but expressive intensity model.
+        # Smaller coefficients = more realistic goal rates
         linear = (
-            0.12
-            + 0.55 * attack
-            - 0.42 * defense_opp
-            + 0.18 * elo_term
-            + 0.10 * market_term
-            + 0.12 * form_term
-            + 0.24 * host_term
+            0.05
+            + 0.22 * attack
+            - 0.30 * defense_opp
+            + 0.07 * elo_term
+            + 0.05 * market_term
+            + 0.06 * form_term
+            + 0.10 * host_term
             + 0.08 * travel_term
             + 0.08 * scenario_term
         )
 
-        # Host nations can get a mild structural lift.
-        if team_profile.get("team") in HOST_TEAMS:
-            linear += 0.06
-
-        # Slight dampening in highly tense matches if stakes are set.
         if stakes == "Knockout_Tension":
-            linear -= 0.08
+            linear -= 0.06
 
-        lambda_base = np.exp(linear)
-        lambda_final = lambda_base * climate * mentality * stakes_modifier
+        linear = float(np.clip(linear, -1.10, 0.80))
+        lambda_final = float(np.exp(linear) * climate * mentality * stakes_modifier)
 
-        return float(np.clip(lambda_final, 0.15, 4.80))
+        return float(np.clip(lambda_final, 0.25, 2.40))
 
     def _shared_intensity(self, lambda_a: float, lambda_b: float) -> float:
-        # Shared latent state for a bivariate Poisson: small positive covariance.
-        shared = 0.10 + 0.18 * np.sqrt(max(lambda_a, 0.0) * max(lambda_b, 0.0))
-        return float(np.clip(shared, 0.03, 0.60))
+        shared = 0.4 + 0.08 * np.sqrt(max(lambda_a, 0.0) * max(lambda_b, 0.0))
+        if not np.isfinite(shared):
+            shared = 0.10
+        return float(np.clip(shared, 0.02, 0.20))
 
     def _simulate_bivariate_goals(self, lambda_a: float, lambda_b: float) -> tuple[int, int, float]:
+        lambda_a = self._safe_float(lambda_a, 0.6)
+        lambda_b = self._safe_float(lambda_b, 0.6)
+
+        lambda_a = max(lambda_a, 0.15)
+        lambda_b = max(lambda_b, 0.15)
+
         shared = self._shared_intensity(lambda_a, lambda_b)
+
         private_a = max(lambda_a - shared, 0.05)
         private_b = max(lambda_b - shared, 0.05)
 
-        x1 = self.rng.poisson(private_a)
-        x2 = self.rng.poisson(private_b)
-        x3 = self.rng.poisson(shared)
+        private_a = float(np.clip(private_a, 0.05, 4.0))
+        private_b = float(np.clip(private_b, 0.05, 4.0))
+        shared = float(np.clip(shared, 0.03, 0.60))
+
+        x1 = int(self.rng.poisson(private_a))
+        x2 = int(self.rng.poisson(private_b))
+        x3 = int(self.rng.poisson(shared))
 
         return int(x1 + x3), int(x2 + x3), shared
 
@@ -121,7 +129,6 @@ class MatchSimulator:
                 "score_b": score_b,
             }
 
-        # Sudden death
         while score_a == score_b:
             score_a += int(self.rng.binomial(1, p_a))
             score_b += int(self.rng.binomial(1, p_b))
@@ -166,8 +173,8 @@ class MatchSimulator:
         extra_time = False
         penalty_winner = None
         penalty_score = None
-        stage = context.get("stage", "group")
 
+        stage = context.get("stage", "group")
         if stage in KNOCKOUT_STAGES and score_a == score_b:
             extra_time = True
             et_a, et_b, _ = self._simulate_bivariate_goals(lambda_a / 3.0, lambda_b / 3.0)

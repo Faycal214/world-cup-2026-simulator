@@ -10,11 +10,15 @@ HOST_TEAMS = {"Mexico", "Canada", "United States"}
 # Keep scenario bias at zero by default.
 # Turn these on only for controlled experiments.
 SCENARIO_BIAS = {
-    "Argentina": 0.0,
+    "Argentina": 0.10,
     "Iran": 0.0,
-    "Mexico": 0.0,
-    "Canada": 0.0,
-    "United States": 0.0,
+    "Mexico": 0.5,
+    "Canada": 0.5,
+    "United States": 0.5,
+}
+
+TEAM_TRAVEL_PENALTY = {
+    "Iran": 0.35,
 }
 
 GROUPS = {

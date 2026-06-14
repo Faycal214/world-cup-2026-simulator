@@ -44,7 +44,6 @@ class WorldCupSimulator:
     def run_group_stage(self) -> None:
         for matchday in [1, 2, 3]:
             print(f"\n⚡ SIMULATING MATCHDAY {matchday}")
-
             fixtures = self.tournament.generate_fixtures(matchday)
 
             for group, home, away in fixtures:
@@ -75,7 +74,7 @@ class WorldCupSimulator:
 
                 report_ctx = {
                     "stage": f"Group {group} - Matchday {matchday}",
-                    "venue_name": fixture_ctx.get("venue_name", "TBD"),
+                    "venue_name": fixture_ctx.get("venue_name", ""),
                     "stakes_home": format_stakes_display(stakes_home),
                     "stakes_away": format_stakes_display(stakes_away),
                 }
@@ -84,7 +83,7 @@ class WorldCupSimulator:
                 sim_ctx = {
                     "stage": "group_stage_final" if matchday == 3 else "group",
                     "group": group,
-                    "venue_name": fixture_ctx.get("venue_name", "TBD"),
+                    "venue_name": fixture_ctx.get("venue_name", ""),
                     "travel_intensity_proxy": fixture_ctx.get("travel_intensity_proxy", 1.0),
                 }
 

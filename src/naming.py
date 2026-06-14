@@ -8,31 +8,44 @@ TEAM_ALIASES = {
     "u.s.a.": "United States",
     "united states of america": "United States",
     "united states": "United States",
+
     "korea republic": "South Korea",
     "republic of korea": "South Korea",
     "south korea": "South Korea",
+
     "czech republic": "Czechia",
     "czechia": "Czechia",
+
     "turkiye": "Turkey",
     "türkiye": "Turkey",
     "turkey": "Turkey",
+
     "cote d'ivoire": "Ivory Coast",
     "cote d ivoire": "Ivory Coast",
     "côte d'ivoire": "Ivory Coast",
     "ivory coast": "Ivory Coast",
+
     "congo dr": "DR Congo",
     "dr congo": "DR Congo",
     "democratic republic of congo": "DR Congo",
+
     "bosnia-herzegovina": "Bosnia and Herzegovina",
     "bosnia & herzegovina": "Bosnia and Herzegovina",
     "bosnia and herzegovina": "Bosnia and Herzegovina",
+
     "curacao": "Curaçao",
     "curaçao": "Curaçao",
+
     "cape verde": "Cape Verde",
+    "cabo verde": "Cape Verde",
+
     "saudi arabia": "Saudi Arabia",
     "new zealand": "New Zealand",
     "south africa": "South Africa",
-    "cabo verde": "Cape Verde",
+
+    "ir iran": "Iran",
+    "iran": "Iran",
+    "islamic republic of iran": "Iran",
 }
 
 def normalize_text(value: str) -> str:

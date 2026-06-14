@@ -1,0 +1,17 @@
+slot,home_source,away_source,bracket_half,notes
+1,A1,B2,upper,winner A vs runner-up B
+2,C1,D2,upper,winner C vs runner-up D
+3,E1,F2,upper,winner E vs runner-up F
+4,G1,H2,upper,winner G vs runner-up H
+5,I1,J2,lower,winner I vs runner-up J
+6,K1,L2,lower,winner K vs runner-up L
+7,B1,A2,upper,runner-up B vs runner-up A
+8,D1,C2,upper,runner-up D vs runner-up C
+9,F1,E2,lower,runner-up F vs runner-up E
+10,H1,G2,lower,runner-up H vs runner-up G
+11,J1,I2,lower,runner-up J vs runner-up I
+12,L1,K2,lower,runner-up L vs runner-up K
+13,3R1,3R2,upper,third-placed qualifiers slot 1
+14,3R3,3R4,upper,third-placed qualifiers slot 2
+15,3R5,3R6,lower,third-placed qualifiers slot 3
+16,3R7,3R8,lower,third-placed qualifiers slot 4
