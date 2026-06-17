@@ -4,13 +4,13 @@ from typing import List, Tuple
 
 import pandas as pd
 
-from src.config import KNOCKOUT_ROTATION_VENUES
-from src.knockout_engine import KnockoutEngine
-from src.naming import normalize_team_name
-from src.poisson_engine import MatchSimulator
-from src.stakes_engine import calculate_stakes, format_stakes_display
-from src.tournament_engine import TournamentEngine
-from src.venue_data import get_knockout_venue
+from config import KNOCKOUT_ROTATION_VENUES
+from knockout_engine import KnockoutEngine
+from naming import normalize_team_name
+from poisson_engine import MatchSimulator
+from stakes_engine import calculate_stakes, format_stakes_display
+from tournament_engine import TournamentEngine
+from venue_data import get_knockout_venue
 
 
 def print_tree(stage_name: str, matches: list[dict]) -> None:

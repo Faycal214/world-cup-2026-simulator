@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.climate_engine import get_climate_factor
-from src.stakes_engine import get_stakes_modifier
-from src.team_mentality import get_mentality_modifier
-from src.config import HOST_TEAMS
+from climate_engine import get_climate_factor
+from stakes_engine import get_stakes_modifier
+from team_mentality import get_mentality_modifier
+from config import HOST_TEAMS
 
 KNOCKOUT_STAGES = {"round_of_32", "round_of_16", "quarter_finals", "semi_finals", "final"}
 
@@ -58,7 +58,6 @@ class MatchSimulator:
         travel_term = -self._safe_float(team_profile.get("travel_prior"), 0.0)
         scenario_term = self._safe_float(team_profile.get("scenario_bias_prior"), 0.0)
 
-        # Smaller coefficients = more realistic goal rates
         linear = (
             0.05
             + 0.22 * attack
@@ -74,16 +73,18 @@ class MatchSimulator:
         if stakes == "Knockout_Tension":
             linear -= 0.06
 
-        linear = float(np.clip(linear, -1.10, 0.80))
-        lambda_final = float(np.exp(linear) * climate * mentality * stakes_modifier)
+        GOAL_SCALE = 0.88
 
-        return float(np.clip(lambda_final, 0.25, 2.40))
+        linear = float(np.clip(linear, -1.10, 0.80))
+        lambda_final = float(GOAL_SCALE * np.exp(linear) * climate * mentality * stakes_modifier)
+
+        return float(np.clip(lambda_final, 0.20, 2.10))
 
     def _shared_intensity(self, lambda_a: float, lambda_b: float) -> float:
-        shared = 0.4 + 0.08 * np.sqrt(max(lambda_a, 0.0) * max(lambda_b, 0.0))
+        shared = 0.04 + 0.06 * np.sqrt(max(lambda_a, 0.0) * max(lambda_b, 0.0))
         if not np.isfinite(shared):
-            shared = 0.10
-        return float(np.clip(shared, 0.02, 0.20))
+            shared = 0.05
+        return float(np.clip(shared, 0.02, 0.12))
 
     def _simulate_bivariate_goals(self, lambda_a: float, lambda_b: float) -> tuple[int, int, float]:
         lambda_a = self._safe_float(lambda_a, 0.6)
@@ -99,7 +100,7 @@ class MatchSimulator:
 
         private_a = float(np.clip(private_a, 0.05, 4.0))
         private_b = float(np.clip(private_b, 0.05, 4.0))
-        shared = float(np.clip(shared, 0.03, 0.60))
+        shared = float(np.clip(shared, 0.02, 0.12))
 
         x1 = int(self.rng.poisson(private_a))
         x2 = int(self.rng.poisson(private_b))
@@ -177,7 +178,7 @@ class MatchSimulator:
         stage = context.get("stage", "group")
         if stage in KNOCKOUT_STAGES and score_a == score_b:
             extra_time = True
-            et_a, et_b, _ = self._simulate_bivariate_goals(lambda_a / 3.0, lambda_b / 3.0)
+            et_a, et_b, _ = self._simulate_bivariate_goals(lambda_a / 4.0, lambda_b / 4.0)
             score_a += et_a
             score_b += et_b
 

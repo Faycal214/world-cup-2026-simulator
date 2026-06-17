@@ -3,9 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 import pandas as pd
 
-from src.config import PROCESSED_DIR, RAW_DIR
-from src.naming import normalize_team_name
-from src.team_mentality import TEAM_CLIMATE_PROFILES, get_team_class
+from config import PROCESSED_DIR, RAW_DIR
+from naming import normalize_team_name
+from team_mentality import TEAM_CLIMATE_PROFILES, get_team_class
 
 def _load_csv(path: Path, fallback: Path | None = None) -> pd.DataFrame:
     if path.exists():

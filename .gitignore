@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+
+data/processed/*.npz
+data/processed/*.nc
+data/processed/simulation_summary.csv
+data/processed/bayesian_*.json
+data/processed/bayesian_*.npz
+
+*.log
+.ipynb_checkpoints/

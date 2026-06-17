@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from src.naming import normalize_team_name
-from src.team_mentality import TEAM_CLIMATE_PROFILES
-from src.venue_data import VENUE_METADATA
+from naming import normalize_team_name
+from team_mentality import TEAM_CLIMATE_PROFILES
+from venue_data import VENUE_METADATA
 
 def get_climate_factor(team_profile: dict, venue_name: str) -> dict:
     venue_info = VENUE_METADATA.get(venue_name, {})

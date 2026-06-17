@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 from tabulate import tabulate
 
-from src.naming import normalize_team_name
+from naming import normalize_team_name
 
 
 class TournamentEngine:
