@@ -7,6 +7,11 @@ from stakes_engine import get_stakes_modifier
 from team_mentality import get_mentality_modifier
 from config import HOST_TEAMS
 
+from availability_engine import get_availability_factor
+from fatigue_engine import get_fatigue_factor
+from weather_engine import get_weather_factor
+from referee_engine import get_referee_factor
+
 KNOCKOUT_STAGES = {"round_of_32", "round_of_16", "quarter_finals", "semi_finals", "final"}
 
 
@@ -29,6 +34,33 @@ class MatchSimulator:
         except Exception:
             return default
 
+    def _resolve_factor(
+        self,
+        explicit_value,
+        fallback_fn,
+        lo: float,
+        hi: float,
+        default: float = 1.0,
+    ) -> float:
+        """
+        Use an explicit factor if present in the profile/context.
+        Otherwise compute it from the dedicated engine.
+        """
+        explicit = self._safe_float(explicit_value, np.nan)
+        if np.isfinite(explicit) and explicit > 0:
+            return float(np.clip(explicit, lo, hi))
+
+        try:
+            computed = fallback_fn()
+        except Exception:
+            computed = default
+
+        computed = self._safe_float(computed, default)
+        if not np.isfinite(computed) or computed <= 0:
+            computed = default
+
+        return float(np.clip(computed, lo, hi))
+
     def calculate_lambda(
         self,
         team_profile: dict,
@@ -50,11 +82,19 @@ class MatchSimulator:
         attack = self._safe_float(team_profile.get("attack_prior"), 0.0)
         defense_opp = self._safe_float(opponent_profile.get("defense_prior"), 0.0)
 
-        elo_term = self._safe_float(team_profile.get("elo_prior"), 0.0) - self._safe_float(opponent_profile.get("elo_prior"), 0.0)
-        market_term = self._safe_float(team_profile.get("market_prior"), 0.0) - self._safe_float(opponent_profile.get("market_prior"), 0.0)
-        form_term = self._safe_float(team_profile.get("form_prior"), 0.0) - self._safe_float(opponent_profile.get("form_prior"), 0.0)
+        elo_term = self._safe_float(team_profile.get("elo_prior"), 0.0) - self._safe_float(
+            opponent_profile.get("elo_prior"), 0.0
+        )
+        market_term = self._safe_float(team_profile.get("market_prior"), 0.0) - self._safe_float(
+            opponent_profile.get("market_prior"), 0.0
+        )
+        form_term = self._safe_float(team_profile.get("form_prior"), 0.0) - self._safe_float(
+            opponent_profile.get("form_prior"), 0.0
+        )
 
-        host_term = self._safe_float(team_profile.get("host_prior"), 0.0) - self._safe_float(opponent_profile.get("host_prior"), 0.0)
+        host_term = self._safe_float(team_profile.get("host_prior"), 0.0) - self._safe_float(
+            opponent_profile.get("host_prior"), 0.0
+        )
         travel_term = -self._safe_float(team_profile.get("travel_prior"), 0.0)
         scenario_term = self._safe_float(team_profile.get("scenario_bias_prior"), 0.0)
 
@@ -74,9 +114,65 @@ class MatchSimulator:
             linear -= 0.06
 
         GOAL_SCALE = 0.88
-
         linear = float(np.clip(linear, -1.10, 0.80))
+
         lambda_final = float(GOAL_SCALE * np.exp(linear) * climate * mentality * stakes_modifier)
+
+        # Optional modifier layers: use explicit values if present, else compute them.
+        availability_factor = self._resolve_factor(
+            context.get("availability_factor", team_profile.get("availability_factor", np.nan)),
+            lambda: get_availability_factor(
+                team_profile=team_profile,
+                squad_table=context.get("squad_table"),
+                injuries_table=context.get("injuries_table"),
+                suspensions_table=context.get("suspensions_table"),
+            ),
+            lo=0.80,
+            hi=1.00,
+            default=1.00,
+        )
+
+        fatigue_factor = self._resolve_factor(
+            context.get("fatigue_factor", team_profile.get("fatigue_factor", np.nan)),
+            lambda: get_fatigue_factor(
+                team_profile=team_profile,
+                cumulative_minutes=team_profile.get("cumulative_minutes", None),
+                average_age=team_profile.get("average_age", None),
+                squad_depth=team_profile.get("squad_depth", None),
+                days_rest=context.get("days_rest", team_profile.get("days_rest", None)),
+            ),
+            lo=0.85,
+            hi=1.00,
+            default=1.00,
+        )
+
+        weather_factor = self._resolve_factor(
+            context.get("weather_factor", team_profile.get("weather_factor", np.nan)),
+            lambda: get_weather_factor(
+                fixture_context=context,
+                team_profile=team_profile,
+            ),
+            lo=0.90,
+            hi=1.05,
+            default=1.00,
+        )
+
+        referee_factor = self._resolve_factor(
+            context.get("referee_factor", team_profile.get("referee_factor", np.nan)),
+            lambda: get_referee_factor(
+                referee_profile=context.get("referee_profile", {}),
+                team_profile=team_profile,
+                opponent_profile=opponent_profile,
+            ),
+            lo=0.97,
+            hi=1.03,
+            default=1.00,
+        )
+
+        lambda_final *= availability_factor
+        lambda_final *= fatigue_factor
+        lambda_final *= weather_factor
+        lambda_final *= referee_factor
 
         return float(np.clip(lambda_final, 0.20, 2.10))
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
-from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
@@ -22,7 +22,6 @@ OUTPUT_FILE = PROCESSED_DIR / "simulation_summary.csv"
 
 
 def _knockout_venue(match_number: int) -> str:
-    # Deterministic venue rotation for reproducibility.
     idx = (match_number - 73) % len(KNOCKOUT_ROTATION_VENUES)
     return KNOCKOUT_ROTATION_VENUES[idx]
 
@@ -38,7 +37,6 @@ def _winner_from_result(home: str, away: str, result: dict) -> str:
     if result["score_b"] > result["score_a"]:
         return away
 
-    # Fallback should rarely be used because knockout matches go to pens.
     return home if result.get("winner") == "A" else away
 
 
@@ -70,7 +68,8 @@ class MonteCarloCounts:
     def increment(self, stage: str, team_names: list[str]) -> None:
         arr = getattr(self, stage)
         for team in team_names:
-            arr[self.team_to_idx[team]] += 1
+            if team in self.team_to_idx:
+                arr[self.team_to_idx[team]] += 1
 
     def to_frame(self, n_sims: int) -> pd.DataFrame:
         df = pd.DataFrame(
@@ -95,17 +94,19 @@ class MonteCarloWorldCup:
     ):
         team_profiles = team_profiles.copy()
         team_profiles["team"] = team_profiles["team"].map(normalize_team_name)
+        team_profiles = team_profiles.dropna(subset=["team"]).copy()
+        team_profiles = team_profiles.drop_duplicates(subset=["team"], keep="first")
         team_profiles = team_profiles.set_index("team", drop=False).sort_index()
 
-        self.team_profiles = team_profiles
+        self.base_team_profiles = team_profiles.copy()
+        self.team_profiles = team_profiles.copy()
         self.fixture_features = fixture_features.copy() if fixture_features is not None else pd.DataFrame()
         self.rng = np.random.default_rng(seed)
 
         self.teams = list(self.team_profiles.index)
         self.counts = MonteCarloCounts.create(self.teams)
-        
+
         self.posterior = load_bayesian_posterior()
-        self.base_team_profiles = team_profiles.copy()
 
     def _profile(self, team: str) -> dict:
         key = normalize_team_name(team)
@@ -122,8 +123,20 @@ class MonteCarloWorldCup:
         home: str,
         away: str,
     ) -> tuple[int, int]:
-        profile_home = self._profile(home)
-        profile_away = self._profile(away)
+        fixture_ctx = tournament.get_fixture_context(group, matchday, home, away)
+
+        profile_home = tournament.build_simulation_profile(
+            home,
+            fixture_context=fixture_ctx,
+            matchday=matchday,
+            is_home=True,
+        )
+        profile_away = tournament.build_simulation_profile(
+            away,
+            fixture_context=fixture_ctx,
+            matchday=matchday,
+            is_home=False,
+        )
 
         home_pts = int(tournament.group_tables[group].loc[home, "Pts"])
         away_pts = int(tournament.group_tables[group].loc[away, "Pts"])
@@ -145,13 +158,10 @@ class MonteCarloWorldCup:
             profile_away.get("team_class"),
         )
 
-        fixture_ctx = tournament.get_fixture_context(group, matchday, home, away)
-
         sim_ctx = {
+            **fixture_ctx,
             "stage": "group_stage_final" if matchday == 3 else "group",
             "group": group,
-            "venue_name": fixture_ctx.get("venue_name", ""),
-            "travel_intensity_proxy": fixture_ctx.get("travel_intensity_proxy", 1.0),
         }
 
         result = match_simulator.simulate_match(
@@ -170,19 +180,32 @@ class MonteCarloWorldCup:
     def _play_knockout_match(
         self,
         match_simulator: MatchSimulator,
+        tournament: TournamentEngine,
         home: str,
         away: str,
         stage_context: str,
         match_number: int,
     ) -> str:
-        profile_home = self._profile(home)
-        profile_away = self._profile(away)
         venue_name = _knockout_venue(match_number)
+        fixture_ctx = tournament.build_knockout_context(match_number, stage_context, venue_name)
+
+        profile_home = tournament.build_simulation_profile(
+            home,
+            fixture_context=fixture_ctx,
+            matchday=None,
+            is_home=True,
+        )
+        profile_away = tournament.build_simulation_profile(
+            away,
+            fixture_context=fixture_ctx,
+            matchday=None,
+            is_home=False,
+        )
 
         result = match_simulator.simulate_match(
             profile_home,
             profile_away,
-            {"stage": stage_context, "venue_name": venue_name},
+            fixture_ctx,
             team_class_a=profile_home.get("team_class"),
             team_class_b=profile_away.get("team_class"),
             stakes_a="Knockout_Tension",
@@ -193,17 +216,23 @@ class MonteCarloWorldCup:
 
     def simulate_one_tournament(self) -> str:
         sampled_profiles = sample_strength_table(
-        self.base_team_profiles,
-        self.posterior,
-        self.rng,
-    )
+            self.base_team_profiles,
+            self.posterior,
+            self.rng,
+        )
+
+        sampled_profiles = sampled_profiles.copy()
+        sampled_profiles["team"] = sampled_profiles["team"].map(normalize_team_name)
+        sampled_profiles = sampled_profiles.dropna(subset=["team"]).copy()
+        sampled_profiles = sampled_profiles.drop_duplicates(subset=["team"], keep="first")
+        sampled_profiles = sampled_profiles.set_index("team", drop=False).sort_index()
 
         tournament = TournamentEngine(sampled_profiles, self.fixture_features)
         match_simulator = MatchSimulator(
             random_state=int(self.rng.integers(0, 2**32 - 1))
         )
 
-        self.team_profiles = sampled_profiles.set_index("team", drop=False)
+        self.team_profiles = sampled_profiles.copy()
 
         # -------------------------
         # Group stage
@@ -240,6 +269,7 @@ class MonteCarloWorldCup:
             match_number = 73 + i
             winner = self._play_knockout_match(
                 match_simulator=match_simulator,
+                tournament=tournament,
                 home=home,
                 away=away,
                 stage_context="round_of_32",
@@ -260,6 +290,7 @@ class MonteCarloWorldCup:
         for match_number, home, away in r16_pairings:
             winner = self._play_knockout_match(
                 match_simulator=match_simulator,
+                tournament=tournament,
                 home=home,
                 away=away,
                 stage_context="round_of_16",
@@ -280,6 +311,7 @@ class MonteCarloWorldCup:
         for match_number, home, away in qf_pairings:
             winner = self._play_knockout_match(
                 match_simulator=match_simulator,
+                tournament=tournament,
                 home=home,
                 away=away,
                 stage_context="quarter_finals",
@@ -300,6 +332,7 @@ class MonteCarloWorldCup:
         for match_number, home, away in sf_pairings:
             winner = self._play_knockout_match(
                 match_simulator=match_simulator,
+                tournament=tournament,
                 home=home,
                 away=away,
                 stage_context="semi_finals",
@@ -316,6 +349,7 @@ class MonteCarloWorldCup:
         final_match_number, final_home, final_away = KnockoutEngine.get_final_pairing(sf_winners_by_match)
         champion = self._play_knockout_match(
             match_simulator=match_simulator,
+            tournament=tournament,
             home=final_home,
             away=final_away,
             stage_context="final",
