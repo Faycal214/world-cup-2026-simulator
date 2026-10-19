@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08090d">
+  <title>FWC26 — World Cup Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08090d;
+      --panel: rgba(19, 21, 30, .88);
+      --panel-2: #11131b;
+      --line: rgba(255,255,255,.09);
+      --text: #f5f7fb;
+      --muted: #8e94a8;
+      --purple: #a66bff;
+      --purple-2: #6d4bff;
+      --mint: #7bffd8;
+      --cyan: #4fd8ff;
+      --lime: #c9ff63;
+      --danger: #ff648d;
+      --radius: 18px;
+      --font: 'Montserrat', system-ui, sans-serif;
+      --display: 'Barlow Condensed', Impact, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; min-height: 100vh; color: var(--text); font-family: var(--font);
+      background:
+        radial-gradient(ellipse at 82% 0%, rgba(94,68,198,.17), transparent 35%),
+        radial-gradient(ellipse at 5% 26%, rgba(34,181,194,.07), transparent 27%),
+        var(--bg);
+    }
+    body::before {
+      content: ''; pointer-events: none; position: fixed; inset: 0; opacity: .18; z-index: -1;
+      background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 44px 44px; mask-image: linear-gradient(to bottom, black, transparent 90%);
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    .shell { width: min(1480px, calc(100% - 44px)); margin: 0 auto; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; min-height: 84px; border-bottom: 1px solid var(--line); gap: 20px; }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 230px; }
+    .brand-mark { width: 43px; height: 43px; position: relative; display: grid; place-items: center; border: 1px solid rgba(166,107,255,.6); background: linear-gradient(145deg, rgba(166,107,255,.22), rgba(79,216,255,.06)); border-radius: 13px; font: 800 16px var(--display); letter-spacing: -.04em; box-shadow: 0 0 24px rgba(166,107,255,.12); }
+    .brand-mark::after { content: ''; position: absolute; width: 7px; height: 7px; right: -3px; top: -3px; border-radius: 2px; background: var(--mint); transform: rotate(45deg); }
+    .brand-title { font-size: 12px; letter-spacing: .18em; font-weight: 800; }
+    .brand-sub { color: var(--muted); font-size: 9px; letter-spacing: .16em; margin-top: 5px; }
+    .nav { display: flex; align-items: center; gap: 29px; color: #a8adbd; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+    .nav a:hover { color: white; }
+    .top-right { display: flex; align-items: center; gap: 12px; }
+    .live-indicator { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 99px; padding: 9px 12px; color: #c6c9d4; font-size: 10px; letter-spacing: .08em; white-space: nowrap; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 13px var(--mint); }
+    .hero { padding: 48px 0 26px; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); gap: 22px; }
+    .hero-main { min-height: 320px; position: relative; overflow: hidden; border: 1px solid rgba(166,107,255,.25); border-radius: 24px; padding: 34px 38px; background: linear-gradient(117deg, rgba(22,22,35,.96) 0%, rgba(21,18,37,.91) 50%, rgba(12,28,35,.87) 100%); }
+    .hero-main::before { content: '26'; position: absolute; right: 0; top: -47px; color: rgba(255,255,255,.025); font: 900 clamp(230px, 27vw, 390px)/1 var(--display); letter-spacing: -.08em; pointer-events: none; }
+    .hero-main::after { content: ''; width: 320px; height: 320px; position: absolute; right: 3%; bottom: -240px; border: 1px solid rgba(123,255,216,.20); border-radius: 50%; box-shadow: 0 0 0 30px rgba(123,255,216,.025), 0 0 0 70px rgba(166,107,255,.025); }
+    .eyebrow { display: flex; align-items: center; gap: 10px; color: var(--mint); letter-spacing: .21em; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+    .eyebrow-line { width: 24px; height: 1px; background: var(--mint); }
+    h1 { position: relative; z-index: 1; margin: 20px 0 12px; font: 800 clamp(43px, 5.8vw, 77px)/.92 var(--display); letter-spacing: -.015em; text-transform: uppercase; max-width: 680px; }
+    h1 span { color: var(--purple); }
+    .hero-copy { max-width: 520px; color: #a7aabd; line-height: 1.8; font-size: 12px; }
+    .hero-actions { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; margin-top: 26px; position: relative; z-index: 1; }
+    .primary-btn { color: #08090d; border: 0; border-radius: 10px; padding: 15px 19px; font-size: 11px; text-transform: uppercase; letter-spacing: .075em; font-weight: 800; background: linear-gradient(100deg, var(--mint), #a7ffbc); box-shadow: 0 8px 28px rgba(123,255,216,.12); transition: transform .2s, filter .2s; }
+    .primary-btn:hover { transform: translateY(-2px); filter: brightness(1.06); }
+    .primary-btn:disabled { opacity: .55; cursor: wait; transform: none; }
+    .seed-control { display: flex; align-items: center; gap: 8px; color: #9399ac; font-size: 10px; }
+    .seed-control input { width: 78px; background: rgba(0,0,0,.3); border: 1px solid var(--line); color: white; border-radius: 8px; padding: 10px 9px; outline: none; }
+    .seed-control input:focus { border-color: var(--purple); }
+    .hero-side { display: grid; grid-template-rows: 1fr 1fr; gap: 22px; }
+    .feature-card { border: 1px solid var(--line); background: var(--panel); border-radius: 20px; padding: 23px 25px; position: relative; overflow: hidden; }
+    .feature-card::after { content: ''; position: absolute; width: 95px; height: 95px; border: 1px solid rgba(79,216,255,.16); transform: rotate(30deg); right: -27px; bottom: -45px; }
+    .feature-top { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .16em; font-weight: 800; display: flex; justify-content: space-between; gap: 10px; }
+    .feature-number { margin: 16px 0 4px; font: 800 42px/.9 var(--display); letter-spacing: -.02em; }
+    .feature-number.purple { color: var(--purple); }
+    .feature-number.cyan { color: var(--cyan); }
+    .feature-caption { color: #9298aa; font-size: 10px; }
+    .feature-icon { position: absolute; right: 23px; bottom: 21px; font-size: 21px; opacity: .9; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 0 25px; }
+    .metric { border: 1px solid var(--line); border-radius: 13px; background: rgba(16,18,26,.82); padding: 16px 18px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .metric-label { color: var(--muted); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
+    .metric-value { margin-top: 8px; font: 700 28px/.9 var(--display); }
+    .metric-accent { color: var(--mint); font: 700 20px var(--display); }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 15px; margin: 32px 0 16px; }
+    .section-kicker { color: var(--purple); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .2em; margin-bottom: 6px; }
+    h2 { font: 700 28px/.95 var(--display); letter-spacing: .015em; text-transform: uppercase; margin: 0; }
+    .section-note { color: var(--muted); font-size: 10px; }
+    .content-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, .75fr); gap: 18px; align-items: stretch; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; min-width: 0; }
+    .panel-head { min-height: 58px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 21px; }
+    .panel-title { font-size: 10px; text-transform: uppercase; letter-spacing: .15em; font-weight: 800; }
+    .panel-tag { border: 1px solid var(--line); border-radius: 5px; padding: 5px 7px; color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .09em; white-space: nowrap; }
+    .score-panel { position: relative; background: radial-gradient(ellipse at 50% 0%, rgba(109,75,255,.16), transparent 50%), rgba(19,21,30,.92); }
+    .score-stage { text-align: center; padding-top: 26px; color: #a7abc0; text-transform: uppercase; font-size: 9px; letter-spacing: .17em; font-weight: 700; }
+    .scoreboard { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 12px; padding: 17px 34px 21px; }
+    .team-side { min-width: 0; text-align: center; }
+    .flag { width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center; margin: 0 auto 10px; border: 1px solid rgba(255,255,255,.09); background: rgba(255,255,255,.04); font-size: 25px; }
+    .team-abbr { font: 700 32px/.9 var(--display); letter-spacing: .035em; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+    .team-full { margin-top: 7px; color: #9298ab; font-size: 9px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+    .score-core { min-width: 110px; text-align: center; }
+    .score-number { font: 800 clamp(35px, 4vw, 56px)/.85 var(--display); letter-spacing: .02em; white-space: nowrap; }
+    .score-number .dash { color: #4b5061; padding: 0 4px; }
+    .score-caption { color: var(--mint); margin-top: 13px; font-size: 8px; text-transform: uppercase; letter-spacing: .14em; font-weight: 800; }
+    .score-meta { margin: 0 22px 23px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #9ea3b6; font-size: 9px; }
+    .venue { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .match-state { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+    .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--purple); }
+    .progress-wrap { padding: 0 22px 22px; }
+    .progress-info { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 9px; margin-bottom: 9px; }
+    .progress-track { background: rgba(255,255,255,.06); height: 5px; border-radius: 100px; overflow: hidden; }
+    .progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--purple), var(--cyan), var(--mint)); border-radius: inherit; transition: width .35s ease; }
+    .feed-panel { display: flex; flex-direction: column; min-height: 345px; }
+    .feed-list { padding: 6px 18px 16px; overflow-y: auto; max-height: 342px; }
+    .empty-feed { padding: 35px 10px; text-align: center; color: var(--muted); font-size: 11px; line-height: 1.8; }
+    .feed-item { display: grid; grid-template-columns: 35px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 13px 3px; border-bottom: 1px solid rgba(255,255,255,.055); animation: appear .25s ease both; }
+    @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .feed-flag { background: rgba(255,255,255,.05); border-radius: 9px; width: 34px; height: 34px; display: grid; place-items: center; font-size: 17px; }
+    .feed-teams { font-size: 10px; font-weight: 700; line-height: 1.5; }
+    .feed-stage { color: var(--muted); font-size: 8px; margin-top: 4px; }
+    .feed-score { font: 700 21px var(--display); white-space: nowrap; }
+    .run-hint { margin: 13px 20px 18px; padding: 10px 11px; border-radius: 8px; color: #9ba1b5; background: rgba(166,107,255,.08); border: 1px solid rgba(166,107,255,.15); font-size: 9px; line-height: 1.6; }
+    .bracket-panel { padding-bottom: 7px; }
+    .bracket-scroll { overflow-x: auto; padding: 21px; }
+    .bracket-grid { min-width: 910px; display: grid; grid-template-columns: 1.4fr 1.15fr .98fr .88fr .86fr; gap: 14px; align-items: start; }
+    .bracket-stage-title { color: #a6aabd; font-size: 9px; text-transform: uppercase; letter-spacing: .1em; font-weight: 800; margin: 0 0 13px; }
+    .bracket-count { color: #6d7184; font-size: 8px; font-weight: 500; display: block; margin-top: 4px; letter-spacing: .06em; }
+    .bracket-stack { display: flex; flex-direction: column; gap: 8px; }
+    .bracket-match { border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.022); border-radius: 9px; overflow: hidden; }
+    .bracket-team { display: grid; grid-template-columns: 18px minmax(0,1fr) 19px; align-items: center; gap: 6px; padding: 7px 8px; font-size: 9px; color: #c8cbda; }
+    .bracket-team + .bracket-team { border-top: 1px solid rgba(255,255,255,.055); }
+    .bracket-team.winner { color: var(--mint); background: rgba(123,255,216,.045); }
+    .bracket-team .flag-small { font-size: 12px; }
+    .bracket-team .mini-score { text-align: right; font-weight: 800; font-size: 10px; color: #f4f5f8; }
+    .bracket-team.winner .mini-score { color: var(--mint); }
+    .stage-empty { border: 1px dashed rgba(255,255,255,.1); border-radius: 9px; padding: 14px 8px; text-align: center; color: #555c70; font-size: 9px; line-height: 1.6; }
+    .standings-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+    .group-card { border: 1px solid var(--line); background: var(--panel); border-radius: 13px; overflow: hidden; min-width: 0; }
+    .group-heading { padding: 12px 13px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .group-heading strong { font: 700 21px var(--display); color: var(--purple); }
+    .group-heading span { font-size: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .11em; }
+    .group-card table { width: 100%; border-collapse: collapse; font-size: 9px; }
+    .group-card th { color: #777f95; font-size: 7px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; padding: 9px 8px; text-align: right; }
+    .group-card th:first-child, .group-card td:first-child { text-align: left; }
+    .group-card td { padding: 9px 8px; text-align: right; color: #aeb3c4; border-top: 1px solid rgba(255,255,255,.04); }
+    .group-card td:first-child { color: #e4e6ee; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .group-card tr:nth-child(-n+3) td:first-child { color: #f5f7fb; }
+    .points { color: var(--mint) !important; font-weight: 800; }
+    .champion-panel { position: relative; margin: 26px 0 38px; border: 1px solid rgba(123,255,216,.23); background: radial-gradient(ellipse at 50% 0%, rgba(123,255,216,.08), transparent 45%), linear-gradient(125deg, rgba(16,22,27,.95), rgba(22,18,34,.95)); border-radius: 20px; padding: 25px; display: flex; align-items: center; justify-content: space-between; gap: 20px; overflow: hidden; }
+    .champion-panel::after { content: '★'; position: absolute; right: 18%; top: -36px; font-size: 150px; color: rgba(123,255,216,.035); }
+    .champion-kicker { color: var(--mint); font-size: 9px; letter-spacing: .2em; text-transform: uppercase; font-weight: 800; }
+    .champion-name { margin-top: 8px; font: 800 36px/.95 var(--display); text-transform: uppercase; }
+    .champion-copy { color: var(--muted); font-size: 10px; line-height: 1.7; margin-top: 7px; }
+    .trophy { font-size: 38px; position: relative; z-index: 1; padding: 0 20px; filter: drop-shadow(0 0 15px rgba(123,255,216,.2)); }
+    .footer { padding: 22px 0 30px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 20px; color: #686f83; font-size: 9px; line-height: 1.8; }
+    .footer strong { color: #9da3b6; font-weight: 700; }
+    .toast { position: fixed; bottom: 20px; right: 20px; max-width: min(420px, calc(100% - 40px)); background: #181b25; border: 1px solid rgba(255,100,141,.35); color: #ffdce5; border-radius: 10px; padding: 13px 16px; font-size: 11px; line-height: 1.6; box-shadow: 0 12px 50px rgba(0,0,0,.35); z-index: 10; display: none; }
+    @media (max-width: 980px) { .nav { display: none; } .hero { grid-template-columns: 1fr; } .hero-side { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; } .content-grid { grid-template-columns: 1fr; } .standings-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 620px) { .shell { width: min(100% - 24px, 1480px); } .topbar { min-height: 69px; } .brand { min-width: 0; } .brand-sub { display: none; } .live-indicator { padding: 8px 9px; font-size: 8px; } .hero { padding-top: 22px; gap: 12px; } .hero-main { min-height: 345px; padding: 28px 22px; } h1 { font-size: 52px; } .hero-side { gap: 12px; } .feature-card { padding: 16px; } .feature-number { font-size: 34px; } .feature-icon { right: 12px; bottom: 12px; } .metrics { grid-template-columns: repeat(2,1fr); gap: 8px; } .metric { padding: 13px; } .scoreboard { padding: 17px 12px 20px; gap: 4px; } .score-core { min-width: 92px; } .flag { width: 40px; height: 40px; font-size: 21px; } .team-abbr { font-size: 27px; } .team-full { font-size: 8px; } .score-meta { margin: 0 12px 18px; } .panel-head { padding: 15px; } .feed-list { padding: 6px 13px 13px; } .standings-grid { grid-template-columns: 1fr; } .section-head { align-items: start; flex-direction: column; } .champion-panel { padding: 21px 17px; } .champion-name { font-size: 31px; } .trophy { padding: 0; font-size: 30px; } .footer { flex-direction: column; gap: 6px; } }
+  </style>
+</head>
+<body>
+  <header class="shell topbar">
+    <a class="brand" href="#top" aria-label="FWC26 home">
+      <div class="brand-mark">26</div>
+      <div><div class="brand-title">FWC26 SIMULATOR</div><div class="brand-sub">THE WORLD'S GAME · REIMAGINED</div></div>
+    </a>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="#live">Match center</a><a href="#bracket">Knockout tree</a><a href="#standings">Group tables</a>
+    </nav>
+    <div class="top-right"><div class="live-indicator"><span class="dot"></span><span id="connection-label">SIMULATION ENGINE READY</span></div></div>
+  </header>
+
+  <main id="top" class="shell">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="eyebrow"><span class="eyebrow-line"></span> Canada · Mexico · United States / 2026</div>
+        <h1>One world.<br><span>One champion.</span></h1>
+        <p class="hero-copy">Run the tournament through your existing match engine. Follow every fixture as it resolves, watch the group tables change, then track the road to the final — one match at a time.</p>
+        <div class="hero-actions">
+          <button id="run-button" class="primary-btn">▶ &nbsp; Simulate tournament</button>
+          <label class="seed-control" for="seed-input">RANDOM SEED <input id="seed-input" type="number" min="0" max="2147483647" value="42"></label>
+        </div>
+      </div>
+      <div class="hero-side">
+        <div class="feature-card">
+          <div class="feature-top"><span>Format</span><span>01 / 02</span></div>
+          <div class="feature-number purple">48 <span style="font-size:19px">TEAMS</span></div>
+          <div class="feature-caption">12 groups · expanded knockout bracket</div><div class="feature-icon">◇</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-top"><span>Simulation mode</span><span>02 / 02</span></div>
+          <div class="feature-number cyan">LIVE<span style="color:var(--mint)">.</span></div>
+          <div class="feature-caption">Streaming match events via WebSocket</div><div class="feature-icon">⌁</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="metrics" aria-label="Tournament progress">
+      <div class="metric"><div><div class="metric-label">Matches simulated</div><div class="metric-value" id="metric-matches">000<span style="color:#686f83"> / 103</span></div></div><span class="metric-accent">↗</span></div>
+      <div class="metric"><div><div class="metric-label">Stage</div><div class="metric-value" id="metric-stage">READY</div></div><span class="metric-accent">⌁</span></div>
+      <div class="metric"><div><div class="metric-label">Group tables</div><div class="metric-value" id="metric-groups">12</div></div><span class="metric-accent">▦</span></div>
+      <div class="metric"><div><div class="metric-label">Champion</div><div class="metric-value" id="metric-champion" style="font-size:22px">—</div></div><span class="metric-accent">★</span></div>
+    </section>
+
+    <div class="section-head" id="live"><div><div class="section-kicker">01 — Live data stream</div><h2>Match center</h2></div><div class="section-note" id="live-note">Start a simulation to see the first whistle.</div></div>
+    <section class="content-grid">
+      <article class="panel score-panel">
+        <div class="panel-head"><div class="panel-title">Featured scoreboard</div><div class="panel-tag" id="score-stage-tag">Waiting for kick-off</div></div>
+        <div class="score-stage" id="score-stage">Tournament simulation · not started</div>
+        <div class="scoreboard">
+          <div class="team-side"><div class="flag" id="home-flag">🏳️</div><div class="team-abbr" id="home-abbr">TBD</div><div class="team-full" id="home-name">HOME TEAM</div></div>
+          <div class="score-core"><div class="score-number"><span id="home-score">0</span><span class="dash">:</span><span id="away-score">0</span></div><div class="score-caption" id="score-caption">READY TO PLAY</div></div>
+          <div class="team-side"><div class="flag" id="away-flag">🏳️</div><div class="team-abbr" id="away-abbr">TBD</div><div class="team-full" id="away-name">AWAY TEAM</div></div>
+        </div>
+        <div class="score-meta"><span class="venue" id="score-venue">Venue details will appear here</span><span class="match-state"><span class="pulse"></span><span id="match-status">STANDBY</span></span></div>
+        <div class="progress-wrap"><div class="progress-info"><span>TOURNAMENT PROGRESS</span><span id="progress-text">0%</span></div><div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div></div>
+      </article>
+
+      <article class="panel feed-panel">
+        <div class="panel-head"><div class="panel-title">Live match feed</div><div class="panel-tag" id="feed-count">0 results</div></div>
+        <div class="feed-list" id="feed-list"><div class="empty-feed" id="feed-empty">Your match feed is waiting.<br>Kick off the tournament to populate live results.</div></div>
+        <div class="run-hint" id="run-hint">The simulation runs in a worker thread. Match events are pushed to this page as they happen, so the interface stays responsive.</div>
+      </article>
+    </section>
+
+    <div class="section-head" id="bracket"><div><div class="section-kicker">02 — The road to the trophy</div><h2>Knockout tree</h2></div><div class="section-note">Results appear round by round as teams qualify.</div></div>
+    <section class="panel bracket-panel">
+      <div class="panel-head"><div class="panel-title">Elimination phase</div><div class="panel-tag">Live bracket</div></div>
+      <div class="bracket-scroll"><div class="bracket-grid" id="bracket-grid">
+        <div data-bracket-stage="round_of_32"><div class="bracket-stage-title">Round of 32<span class="bracket-count">16 MATCHES</span></div><div class="bracket-stack"><div class="stage-empty">Waiting for group qualification</div></div></div>
+        <div data-bracket-stage="round_of_16"><div class="bracket-stage-title">Round of 16<span class="bracket-count">8 MATCHES</span></div><div class="bracket-stack"><div class="stage-empty">Waiting for Round of 32</div></div></div>
+        <div data-bracket-stage="quarter_finals"><div class="bracket-stage-title">Quarter-finals<span class="bracket-count">4 MATCHES</span></div><div class="bracket-stack"><div class="stage-empty">Waiting for Round of 16</div></div></div>
+        <div data-bracket-stage="semi_finals"><div class="bracket-stage-title">Semi-finals<span class="bracket-count">2 MATCHES</span></div><div class="bracket-stack"><div class="stage-empty">Waiting for quarter-finals</div></div></div>
+        <div data-bracket-stage="final"><div class="bracket-stage-title">Final<span class="bracket-count">1 MATCH</span></div><div class="bracket-stack"><div class="stage-empty">One trophy. Two finalists.</div></div></div>
+      </div></div>
+    </section>
+
+    <div class="section-head" id="standings"><div><div class="section-kicker">03 — The group stage</div><h2>Group tables</h2></div><div class="section-note" id="standings-note">Tables refresh after each matchday.</div></div>
+    <section class="standings-grid" id="standings-grid">
+      <div class="group-card" style="grid-column:1/-1"><div class="empty-feed">Group tables will populate when the first matchday is complete.</div></div>
+    </section>
+
+    <section class="champion-panel" aria-live="polite">
+      <div><div class="champion-kicker">The final whistle</div><div class="champion-name" id="champion-name">Your champion is still unknown.</div><div class="champion-copy" id="champion-copy">Start a new tournament to discover who lifts the 2026 trophy.</div></div><div class="trophy">🏆</div>
+    </section>
+
+    <footer class="footer"><div><strong>FWC26 SIMULATOR</strong><br>Built on the repository's existing Python match and tournament engines.</div><div>Simulation output is probabilistic, seed-based, and not an official FIFA forecast.</div></footer>
+  </main>
+  <div id="toast" class="toast" role="alert"></div>
+
+  <script>
+    const TOTAL_MATCHES = 103;
+    const FLAGS = {
+      'Argentina':'🇦🇷','Algeria':'🇩🇿','Australia':'🇦🇺','Austria':'🇦🇹','Belgium':'🇧🇪','Bosnia and Herzegovina':'🇧🇦','Brazil':'🇧🇷','Canada':'🇨🇦','Cape Verde':'🇨🇻','Colombia':'🇨🇴','Croatia':'🇭🇷','Curaçao':'🇨🇼','Czechia':'🇨🇿','DR Congo':'🇨🇩','Ecuador':'🇪🇨','Egypt':'🇪🇬','England':'🏴','France':'🇫🇷','Germany':'🇩🇪','Ghana':'🇬🇭','Haiti':'🇭🇹','Iran':'🇮🇷','Iraq':'🇮🇶','Ivory Coast':'🇨🇮','Japan':'🇯🇵','Jordan':'🇯🇴','Mexico':'🇲🇽','Morocco':'🇲🇦','Netherlands':'🇳🇱','New Zealand':'🇳🇿','Norway':'🇳🇴','Panama':'🇵🇦','Paraguay':'🇵🇾','Portugal':'🇵🇹','Qatar':'🇶🇦','Saudi Arabia':'🇸🇦','Scotland':'🏴','Senegal':'🇸🇳','South Africa':'🇿🇦','South Korea':'🇰🇷','Spain':'🇪🇸','Sweden':'🇸🇪','Switzerland':'🇨🇭','Tunisia':'🇹🇳','Turkey':'🇹🇷','United States':'🇺🇸','Uruguay':'🇺🇾','Uzbekistan':'🇺🇿'
+    };
+    const ABBR = {
+      'Argentina':'ARG','Algeria':'ALG','Australia':'AUS','Austria':'AUT','Belgium':'BEL','Bosnia and Herzegovina':'BIH','Brazil':'BRA','Canada':'CAN','Cape Verde':'CPV','Colombia':'COL','Croatia':'CRO','Curaçao':'CUW','Czechia':'CZE','DR Congo':'COD','Ecuador':'ECU','Egypt':'EGY','England':'ENG','France':'FRA','Germany':'GER','Ghana':'GHA','Haiti':'HAI','Iran':'IRN','Iraq':'IRQ','Ivory Coast':'CIV','Japan':'JPN','Jordan':'JOR','Mexico':'MEX','Morocco':'MAR','Netherlands':'NED','New Zealand':'NZL','Norway':'NOR','Panama':'PAN','Paraguay':'PAR','Portugal':'POR','Qatar':'QAT','Saudi Arabia':'KSA','Scotland':'SCO','Senegal':'SEN','South Africa':'RSA','South Korea':'KOR','Spain':'ESP','Sweden':'SWE','Switzerland':'SUI','Tunisia':'TUN','Turkey':'TUR','United States':'USA','Uruguay':'URU','Uzbekistan':'UZB'
+    };
+    const STAGES = [
+      ['round_of_32','Round of 32'],['round_of_16','Round of 16'],['quarter_finals','Quarter-finals'],['semi_finals','Semi-finals'],['final','Final']
+    ];
+    let socket = null;
+    let running = false;
+    let matchCount = 0;
+    let groupTables = [];
+    let bracketMatches = {round_of_32:[], round_of_16:[], quarter_finals:[], semi_finals:[], final:[]};
+    let recentMatches = [];
+
+    const $ = (id) => document.getElementById(id);
+    const flagFor = (team) => FLAGS[team] || '🏳️';
+    const abbrFor = (team) => ABBR[team] || team.split(/\s+/).map((part) => part[0] || '').join('').toUpperCase().slice(0,3);
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+
+    function toast(message) {
+      const el = $('toast');
+      el.textContent = message;
+      el.style.display = 'block';
+      window.clearTimeout(toast.timer);
+      toast.timer = window.setTimeout(() => { el.style.display = 'none'; }, 7000);
+    }
+
+    function setRunning(value) {
+      running = value;
+      $('run-button').disabled = value;
+      $('run-button').textContent = value ? '◌  Simulation running…' : '▶  Simulate tournament';
+      $('connection-label').textContent = value ? 'LIVE SIMULATION' : 'SIMULATION ENGINE READY';
+      $('match-status').textContent = value ? 'IN PROGRESS' : 'STANDBY';
+    }
+
+    function resetDisplay(seed) {
+      matchCount = 0;
+      groupTables = [];
+      bracketMatches = {round_of_32:[], round_of_16:[], quarter_finals:[], semi_finals:[], final:[]};
+      recentMatches = [];
+      $('metric-matches').innerHTML = '000<span style="color:#686f83"> / ' + TOTAL_MATCHES + '</span>';
+      $('metric-stage').textContent = 'GROUPS';
+      $('metric-champion').textContent = '—';
+      $('metric-groups').textContent = '12';
+      $('score-stage').textContent = 'Preparing tournament…';
+      $('score-stage-tag').textContent = 'Booting engine';
+      $('score-caption').textContent = 'LOADING TEAMS';
+      $('score-venue').textContent = 'Loading fixture and team data';
+      $('progress-text').textContent = '0%';
+      $('progress-fill').style.width = '0%';
+      $('live-note').textContent = 'Starting simulation with random seed ' + seed + '.';
+      $('feed-list').innerHTML = '<div class="empty-feed" id="feed-empty">Loading the tournament data…</div>';
+      $('bracket-grid').querySelectorAll('[data-bracket-stage]').forEach((column) => {
+        const key = column.dataset.bracketStage;
+        const messages = {round_of_32:'Waiting for group qualification',round_of_16:'Waiting for Round of 32',quarter_finals:'Waiting for Round of 16',semi_finals:'Waiting for quarter-finals',final:'One trophy. Two finalists.'};
+        column.querySelector('.bracket-stack').innerHTML = '<div class="stage-empty">' + messages[key] + '</div>';
+      });
+      $('standings-grid').innerHTML = '<div class="group-card" style="grid-column:1/-1"><div class="empty-feed">Group tables will populate when the first matchday is complete.</div></div>';
+      $('standings-note').textContent = 'Tables refresh after each matchday.';
+      $('champion-name').textContent = 'Your champion is still unknown.';
+      $('champion-copy').textContent = 'The draw is ready. Waiting for the first whistle.';
+    }
+
+    function updateProgress() {
+      const pct = Math.min(100, Math.round(matchCount / TOTAL_MATCHES * 100));
+      $('metric-matches').innerHTML = String(matchCount).padStart(3, '0') + '<span style="color:#686f83"> / ' + TOTAL_MATCHES + '</span>';
+      $('progress-text').textContent = pct + '%';
+      $('progress-fill').style.width = pct + '%';
+      $('feed-count').textContent = matchCount + ' result' + (matchCount === 1 ? '' : 's');
+    }
+
+    function showMatch(event) {
+      matchCount += 1;
+      $('home-flag').textContent = flagFor(event.home);
+      $('away-flag').textContent = flagFor(event.away);
+      $('home-abbr').textContent = abbrFor(event.home);
+      $('away-abbr').textContent = abbrFor(event.away);
+      $('home-name').textContent = event.home;
+      $('away-name').textContent = event.away;
+      $('home-score').textContent = event.score_home;
+      $('away-score').textContent = event.score_away;
+      $('score-stage').textContent = event.stage;
+      $('score-stage-tag').textContent = event.phase === 'groups' ? 'Group stage' : 'Knockout';
+      $('score-caption').textContent = event.penalty_score ? 'DECIDED ON PENALTIES' : (event.extra_time ? 'AFTER EXTRA TIME' : (event.winner ? 'FULL TIME' : 'FULL TIME · DRAW'));
+      $('score-venue').textContent = event.venue || 'Venue not recorded';
+      $('match-status').textContent = event.method === 'AET+PKs' ? 'AET + PK' : (event.extra_time ? 'EXTRA TIME' : 'FINAL');
+      $('metric-stage').textContent = event.phase === 'groups' ? 'GROUPS' : abbrForStage(event.stage_key);
+      $('live-note').textContent = event.stage + ' · result received';
+      updateProgress();
+
+      if (event.stage_key && event.stage_key !== 'group' && bracketMatches[event.stage_key]) {
+        bracketMatches[event.stage_key].push(event);
+        renderBracket();
+      }
+      recentMatches.unshift(event);
+      recentMatches = recentMatches.slice(0, 8);
+      renderFeed();
+      if (event.stage_key === 'final' && event.winner) showChampion(event.winner);
+    }
+
+    function abbrForStage(key) {
+      return ({round_of_32:'R32',round_of_16:'R16',quarter_finals:'QF',semi_finals:'SF',final:'FINAL'})[key] || 'GROUPS';
+    }
+
+    function renderFeed() {
+      const list = $('feed-list');
+      if (!recentMatches.length) return;
+      list.innerHTML = recentMatches.map((match) => {
+        let extra = match.penalty_score ? ' · PK ' + match.penalty_score[0] + '–' + match.penalty_score[1] : (match.extra_time ? ' · AET' : '');
+        return '<div class="feed-item"><div class="feed-flag">' + flagFor(match.home) + '</div><div><div class="feed-teams">' + escapeHtml(match.home) + ' <span style="color:#626a7f">vs</span> ' + escapeHtml(match.away) + '</div><div class="feed-stage">' + escapeHtml(match.stage) + extra + '</div></div><div class="feed-score">' + match.score_home + '–' + match.score_away + '</div></div>';
+      }).join('');
+    }
+
+    function renderBracket() {
+      STAGES.forEach(([key, label]) => {
+        const column = $('bracket-grid').querySelector('[data-bracket-stage="' + key + '"]');
+        const stack = column.querySelector('.bracket-stack');
+        const matches = bracketMatches[key];
+        column.querySelector('.bracket-count').textContent = matches.length + ' / ' + ({round_of_32:16,round_of_16:8,quarter_finals:4,semi_finals:2,final:1})[key] + ' MATCHES';
+        if (!matches.length) return;
+        stack.innerHTML = matches.map((match) => {
+          const homeWon = match.winner === match.home;
+          const awayWon = match.winner === match.away;
+          return '<div class="bracket-match"><div class="bracket-team ' + (homeWon ? 'winner' : '') + '"><span class="flag-small">' + flagFor(match.home) + '</span><span title="' + escapeHtml(match.home) + '">' + escapeHtml(abbrFor(match.home)) + '</span><span class="mini-score">' + match.score_home + '</span></div><div class="bracket-team ' + (awayWon ? 'winner' : '') + '"><span class="flag-small">' + flagFor(match.away) + '</span><span title="' + escapeHtml(match.away) + '">' + escapeHtml(abbrFor(match.away)) + '</span><span class="mini-score">' + match.score_away + '</span></div></div>';
+        }).join('');
+      });
+    }
+
+    function renderStandings() {
+      if (!groupTables.length) return;
+      $('standings-grid').innerHTML = groupTables.map((group) => {
+        const rows = group.rows.map((team) => '<tr><td title="' + escapeHtml(team.team) + '">' + flagFor(team.team) + ' ' + escapeHtml(team.team) + '</td><td>' + team.mp + '</td><td>' + team.gd + '</td><td class="points">' + team.pts + '</td></tr>').join('');
+        return '<article class="group-card"><div class="group-heading"><strong>' + group.group + '</strong><span>Group ' + group.group + '</span></div><table><thead><tr><th>Team</th><th>MP</th><th>GD</th><th>Pts</th></tr></thead><tbody>' + rows + '</tbody></table></article>';
+      }).join('');
+      $('standings-note').textContent = 'Updated after matchday ' + Math.max(...groupTables.map((g) => Math.max(0, ...g.rows.map((r) => r.mp)))) / 3 + ' completed.';
+    }
+
+    function showChampion(champion) {
+      if (!champion) return;
+      $('metric-champion').textContent = abbrFor(champion);
+      $('champion-name').textContent = flagFor(champion) + '  ' + champion;
+      $('champion-copy').textContent = 'Champion confirmed by the final match result. Seeded run: ' + $('seed-input').value + '.';
+    }
+
+    function handleEvent(event) {
+      if (event.type === 'status') {
+        $('connection-label').textContent = 'LIVE SIMULATION';
+      } else if (event.type === 'match') {
+        showMatch(event);
+      } else if (event.type === 'standings') {
+        groupTables = event.groups || [];
+        renderStandings();
+      } else if (event.type === 'complete') {
+        setRunning(false);
+        $('connection-label').textContent = 'SIMULATION COMPLETE';
+        $('match-status').textContent = 'COMPLETE';
+        $('metric-stage').textContent = 'FINAL';
+        $('progress-text').textContent = '100%';
+        $('progress-fill').style.width = '100%';
+        if (event.champion) showChampion(event.champion);
+        $('live-note').textContent = 'Full tournament completed · ' + event.matches_played + ' match results streamed.';
+        $('run-hint').textContent = 'Run complete. Change the seed and launch another tournament to explore a different outcome.';
+      } else if (event.type === 'error') {
+        setRunning(false);
+        $('connection-label').textContent = 'SIMULATION ERROR';
+        $('match-status').textContent = 'ERROR';
+        toast(event.message || 'The simulator returned an error. Check the server terminal for details.');
+      }
+    }
+
+    function startSimulation() {
+      if (running) return;
+      const seedValue = Number.parseInt($('seed-input').value, 10);
+      const seed = Number.isFinite(seedValue) && seedValue >= 0 ? seedValue : 42;
+      $('seed-input').value = seed;
+      resetDisplay(seed);
+      setRunning(true);
+      $('run-hint').textContent = 'Engine is running. Keep this page open to watch fixtures stream in real time.';
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      socket = new WebSocket(wsProtocol + '//' + window.location.host + '/ws/simulate?seed=' + encodeURIComponent(seed));
+      socket.onmessage = (message) => {
+        try { handleEvent(JSON.parse(message.data)); }
+        catch (error) { console.error('Could not parse simulation event', error); }
+      };
+      socket.onerror = () => {
+        setRunning(false);
+        $('connection-label').textContent = 'CONNECTION ERROR';
+        toast('Could not connect to the simulation API. Start the app with uvicorn app:app --reload.');
+      };
+      socket.onclose = () => {
+        if (running) {
+          setRunning(false);
+          if (matchCount < TOTAL_MATCHES) $('connection-label').textContent = 'CONNECTION CLOSED';
+        }
+      };
+    }
+
+    $('run-button').addEventListener('click', startSimulation);
+    fetch('/api/health').then((response) => response.json()).then((data) => {
+      if (data.status === 'ok') $('connection-label').textContent = 'SIMULATION ENGINE READY';
+    }).catch(() => {
+      $('connection-label').textContent = 'API NOT CONNECTED';
+    });
+  </script>
+</body>
+</html>

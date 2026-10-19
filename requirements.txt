@@ -9,4 +9,6 @@ pymc
 arviz
 pytensor
 matplotlib
-scipy
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+jinja2>=3.1.0
